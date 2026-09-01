@@ -40,6 +40,21 @@ class CheckoutTest extends TestCase
         }
     }
 
+    public function test_checkout_succeeds_when_all_receiver_information_is_provided(): void
+    {
+        $this->checkout([
+            'customer_name' => 'Andi',
+            'customer_phone' => '08123456789',
+            'customer_address' => 'Jl. Contoh No. 1',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'customer_name' => 'Andi',
+            'customer_phone' => '08123456789',
+            'customer_address' => 'Jl. Contoh No. 1',
+        ]);
+    }
+
     public function test_regular_shipping_uses_the_server_calculated_fee(): void
     {
         $this->checkout(['shipping_method' => 'regular'])->assertRedirect();

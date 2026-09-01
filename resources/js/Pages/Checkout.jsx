@@ -32,7 +32,7 @@ export default function App() {
   const checkoutQty = productStock > 0
     ? Math.min(Math.max(1, Number(initialQty) || 1), productStock)
     : 1;
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, post, processing, errors, clearErrors } = useForm({
     product_id: product?.product_id ?? '',
     qty: checkoutQty,
     brew_method: '',
@@ -86,6 +86,11 @@ export default function App() {
 
   const handleRemoveItem = (id) => {
     setCartItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const updateReceiverField = (field, value) => {
+    setData(field, value);
+    clearErrors(field);
   };
 
   const submitCheckout = (e) => {
@@ -384,22 +389,22 @@ export default function App() {
               <motion.section variants={fadeInUp} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-[#2C1E16]/5">
                 <h2 className="text-xl font-bold mb-6">Informasi Pengiriman</h2>
                 
-                <form onSubmit={submitCheckout} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <form id="checkout-form" onSubmit={submitCheckout} className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Nama Lengkap</label>
-                    <input type="text" value={data.customer_name} onChange={(e) => setData('customer_name', e.target.value)} placeholder="Masukkan nama..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all" />
+                    <input type="text" value={data.customer_name} onChange={(e) => updateReceiverField('customer_name', e.target.value)} placeholder="Masukkan nama..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all" />
                     {errors.customer_name && <span className="text-red-500 text-xs">{errors.customer_name}</span>}
                   </div>
                   
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Nomor HP</label>
-                    <input type="tel" value={data.customer_phone} onChange={(e) => setData('customer_phone', e.target.value)} placeholder="08..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all" />
+                    <input type="tel" value={data.customer_phone} onChange={(e) => updateReceiverField('customer_phone', e.target.value)} placeholder="08..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all" />
                     {errors.customer_phone && <span className="text-red-500 text-xs">{errors.customer_phone}</span>}
                   </div>
 
                   <div className="flex flex-col gap-2 md:col-span-2">
                     <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Alamat Lengkap</label>
-                    <textarea rows="3" maxLength="1000" value={data.customer_address} onChange={(e) => setData('customer_address', e.target.value)} placeholder="Nama jalan, gedung, RT/RW..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all resize-none"></textarea>
+                    <textarea rows="3" maxLength="1000" value={data.customer_address} onChange={(e) => updateReceiverField('customer_address', e.target.value)} placeholder="Nama jalan, gedung, RT/RW..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all resize-none"></textarea>
                     {errors.customer_address && <span className="text-red-500 text-xs">{errors.customer_address}</span>}
                   </div>
 
@@ -477,11 +482,11 @@ export default function App() {
 
                 {/* Checkout Button */}
                 <motion.button 
-                  type="button"
+                  type="submit"
+                  form="checkout-form"
                   whileHover={{ scale: 1.02, backgroundColor: '#b86b30' }}
                   whileTap={{ scale: 0.95 }}
                   disabled={processing || cartItems.length === 0}
-                  onClick={submitCheckout}
                   className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/20 flex items-center justify-center gap-2 group disabled:opacity-50"
                 >
                   {processing ? 'Memproses...' : 'Bayar Sekarang'}
