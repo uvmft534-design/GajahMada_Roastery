@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+class GoogleAccountLinker
+{
+    public function link(string $email, string $googleId, ?string $name): User
+    {
+        $email = mb_strtolower(trim($email));
+        $linkedUser = User::where('google_id', $googleId)->first();
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        if ($linkedUser && (! $user || $linkedUser->id !== $user->id)) {
+            throw new \RuntimeException('Akun Google ini sudah terhubung ke pengguna lain.');
+        }
+
+        if (! $user) {
+            return User::create([
+                'name' => $name ?: 'Google User', 'email' => $email, 'google_id' => $googleId,
+                'role' => 'customer', 'email_verified_at' => now(), 'password' => Hash::make(Str::random(48)),
+            ]);
+        }
+
+        if ($user->google_id && $user->google_id !== $googleId) {
+            throw new \RuntimeException('Email ini telah terhubung ke akun Google lain.');
+        }
+
+        $user->forceFill(['google_id' => $googleId, 'email_verified_at' => $user->email_verified_at ?? now()])->save();
+
+        return $user;
+    }
+}
