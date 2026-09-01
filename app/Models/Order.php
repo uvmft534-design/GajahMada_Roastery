@@ -15,6 +15,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'courier_id',
         'order_number',
         'status',
         'shipping_method',
@@ -36,6 +37,9 @@ class Order extends Model
         'total_amount',
         'tracking_number',
         'stock_released_at',
+        'picked_up_at',
+        'shipped_at',
+        'delivered_at',
     ];
 
     public function user(): BelongsTo
@@ -53,8 +57,19 @@ class Order extends Model
         return $this->belongsTo(User::class, 'payment_reviewed_by');
     }
 
+    public function courier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'courier_id');
+    }
+
     protected function casts(): array
     {
-        return ['stock_released_at' => 'datetime', 'payment_reviewed_at' => 'datetime'];
+        return [
+            'stock_released_at' => 'datetime',
+            'payment_reviewed_at' => 'datetime',
+            'picked_up_at' => 'datetime',
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
+        ];
     }
 }

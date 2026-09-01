@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\OrderFulfillmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -91,7 +92,7 @@ class OrderController extends Controller
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
                 'total_amount' => $total,
-                'tracking_number' => 'TRK-'.strtoupper(Str::random(10)),
+                'tracking_number' => null,
             ]);
 
             OrderItem::create([
@@ -133,7 +134,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $this->authorize('view', $order);
-        $order->load('items.product', 'user');
+        $order->load('items.product', 'user', 'courier');
 
         return Inertia::render('OrderDetail', [
             'order' => $order,
@@ -153,7 +154,7 @@ class OrderController extends Controller
     public function tracking(Order $order)
     {
         $this->authorize('view', $order);
-        $order->load('items.product');
+        $order->load('items.product', 'courier');
 
         return Inertia::render('OrderTracking', [
             'order' => $order,
@@ -162,7 +163,7 @@ class OrderController extends Controller
 
     public function adminIndex()
     {
-        $orders = Order::with('items.product', 'user')->latest('created_at')->get();
+        $orders = Order::with('items.product', 'user', 'courier')->latest('created_at')->get();
 
         $chartData = [];
         $chartLabels = [];
@@ -186,6 +187,7 @@ class OrderController extends Controller
         return Inertia::render('Dashboard_Admin', [
             'products' => Product::latest('product_id')->get(),
             'orders' => $orders,
+            'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
             'analytics' => $analytics,
         ]);
     }
@@ -202,6 +204,72 @@ class OrderController extends Controller
         $fulfillment->pack($order);
 
         return back()->with('success', 'Pesanan siap untuk tahap pickup.');
+    }
+
+    public function requestPickup(Request $request, Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $validated = $request->validate(['courier_id' => 'required|integer|exists:users,id']);
+        $fulfillment->requestPickup($order, User::findOrFail($validated['courier_id']));
+
+        return back()->with('success', 'Pickup berhasil diminta kepada courier.');
+    }
+
+    public function courierDashboard(Request $request)
+    {
+        $orders = Order::with(['items.product', 'user'])
+            ->where('courier_id', $request->user()->id)
+            ->latest('created_at')
+            ->get();
+
+        return Inertia::render('Courier/Dashboard', [
+            'orders' => $orders,
+            'overview' => [
+                'newPickups' => $orders->where('status', 'pickup_requested')->count(),
+                'inDelivery' => $orders->whereIn('status', ['picked_up', 'shipped'])->count(),
+                'completedToday' => $orders->filter(fn (Order $order) => $order->delivered_at?->isToday())->count(),
+            ],
+        ]);
+    }
+
+    public function confirmPickup(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('courier', $order);
+        $fulfillment->confirmPickup($order);
+
+        return back()->with('success', 'Pickup berhasil dikonfirmasi.');
+    }
+
+    public function generateTracking(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('courier', $order);
+        $fulfillment->setTrackingNumber($order);
+
+        return back()->with('success', 'Nomor resi berhasil dibuat.');
+    }
+
+    public function saveTracking(Request $request, Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('courier', $order);
+        $validated = $request->validate(['tracking_number' => 'required|string|max:100|unique:orders,tracking_number']);
+        $fulfillment->setTrackingNumber($order, $validated['tracking_number']);
+
+        return back()->with('success', 'Nomor resi berhasil disimpan.');
+    }
+
+    public function startShipping(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('courier', $order);
+        $fulfillment->startShipping($order);
+
+        return back()->with('success', 'Pengiriman dimulai.');
+    }
+
+    public function markDelivered(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('courier', $order);
+        $fulfillment->markDelivered($order);
+
+        return back()->with('success', 'Pesanan ditandai sudah sampai.');
     }
 
     public function cancel(Order $order, OrderFulfillmentService $fulfillment)
@@ -263,9 +331,11 @@ class OrderController extends Controller
         return back()->with('success', 'Bukti pembayaran ditolak.');
     }
 
-    public function complete(Order $order)
+    public function complete(Order $order, OrderFulfillmentService $fulfillment)
     {
         $this->authorize('update', $order);
-        abort(422, 'Status selesai belum tersedia pada flow fulfillment saat ini.');
+        $fulfillment->complete($order);
+
+        return back()->with('success', 'Pesanan selesai.');
     }
 }

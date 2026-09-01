@@ -8,7 +8,6 @@ use App\Http\Controllers\PaymentSettingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdminController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -47,6 +46,7 @@ Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(functio
     Route::get('/admin/dashboard', [OrderController::class, 'adminIndex'])->name('admin.dashboard');
     Route::post('/admin/orders/{order}/process', [OrderController::class, 'processOrder'])->name('admin.orders.process');
     Route::post('/admin/orders/{order}/packed', [OrderController::class, 'markPacked'])->name('admin.orders.packed');
+    Route::post('/admin/orders/{order}/request-pickup', [OrderController::class, 'requestPickup'])->name('admin.orders.request-pickup');
     Route::post('/admin/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('admin.orders.cancel');
     Route::post('/admin/orders/{order}/approve-payment', [OrderController::class, 'approvePayment'])->name('admin.orders.approvePayment');
     Route::post('/admin/orders/{order}/reject-payment', [OrderController::class, 'rejectPayment'])->name('admin.orders.rejectPayment');
@@ -58,7 +58,14 @@ Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(functio
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->get('/admin/payment-settings', [PaymentSettingController::class, 'index'])->name('admin.payment-settings.index');
 Route::middleware(['auth', 'verified', 'role:admin'])->post('/admin/payment-settings/requests', [PaymentSettingController::class, 'requestChange'])->name('admin.payment-settings.requests.store');
 
-Route::middleware(['auth', 'verified', 'role:courier'])->get('/courier/dashboard', fn () => Inertia::render('Courier/Dashboard'))->name('courier.dashboard');
+Route::middleware(['auth', 'verified', 'role:courier'])->group(function () {
+    Route::get('/courier/dashboard', [OrderController::class, 'courierDashboard'])->name('courier.dashboard');
+    Route::post('/courier/orders/{order}/confirm-pickup', [OrderController::class, 'confirmPickup'])->name('courier.orders.confirm-pickup');
+    Route::post('/courier/orders/{order}/generate-tracking', [OrderController::class, 'generateTracking'])->name('courier.orders.generate-tracking');
+    Route::post('/courier/orders/{order}/tracking', [OrderController::class, 'saveTracking'])->name('courier.orders.save-tracking');
+    Route::post('/courier/orders/{order}/start-shipping', [OrderController::class, 'startShipping'])->name('courier.orders.start-shipping');
+    Route::post('/courier/orders/{order}/delivered', [OrderController::class, 'markDelivered'])->name('courier.orders.delivered');
+});
 
 Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin')->name('super-admin.')->group(function () {
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('dashboard');

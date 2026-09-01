@@ -66,6 +66,14 @@ export default function OrderDetail({ order, items = [] }) {
                 <div className="text-xs text-[#2C1E16]/60 mt-1">VA: {order.va_number || 'Menunggu nomor VA admin'}</div>
                 <div className="text-[11px] uppercase mt-2 font-bold text-[#2C1E16]/50">Status pembayaran: {order.payment_status || 'unpaid'}</div>
               </div>
+
+              <div className="rounded-2xl bg-[#FDFBF7] p-4 border border-[#2C1E16]/10">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">
+                  <Truck size={15} /> Courier & Tracking
+                </div>
+                <div className="text-sm font-bold mt-2">{order.courier?.name || 'Courier belum ditugaskan'}</div>
+                <div className="text-xs text-[#2C1E16]/60 mt-1">{order.tracking_number || 'Nomor resi akan tersedia setelah pesanan dijemput courier.'}</div>
+              </div>
             </div>
 
             {order.payment_proof && (
@@ -78,6 +86,7 @@ export default function OrderDetail({ order, items = [] }) {
             )}
             {order.payment_status === 'rejected' && <div className="mt-4 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</div>}
             {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('orders.cancel', order.order_id))} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600">Batalkan Pesanan</button>}
+            {order.status === 'delivered' && <button onClick={() => router.post(route('orders.complete', order.order_id))} className="mt-4 rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Konfirmasi Barang Diterima</button>}
 
             <div className="mt-8">
               <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Produk</div>

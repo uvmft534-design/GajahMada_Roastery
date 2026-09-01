@@ -56,6 +56,13 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_new_checkout_does_not_create_tracking_number_before_courier_pickup(): void
+    {
+        $this->checkout()->assertRedirect();
+
+        $this->assertDatabaseHas('orders', ['tracking_number' => null]);
+    }
+
     public function test_regular_shipping_uses_the_server_calculated_fee(): void
     {
         $this->checkout(['shipping_method' => 'regular'])->assertRedirect();

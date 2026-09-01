@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
 import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { orderStatusLabel } from '../utils/orderStatus';
 
-export default function DashboardAdmin({ products = [], orders = [], analytics = {} }) {
+export default function DashboardAdmin({ products = [], orders = [], analytics = {}, couriers = [] }) {
   const { auth } = usePage().props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [orderFilter, setOrderFilter] = useState('all');
   const [selectedProof, setSelectedProof] = useState(null);
+  const [courierAssignments, setCourierAssignments] = useState({});
   const filteredOrders = orderFilter === 'all' ? orders : orders.filter((order) => order.status === orderFilter);
 
   // Inertia Form Hook untuk kirim data & file gambar ke backend
@@ -203,7 +205,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
               <p className="text-xs text-[#2C1E16]/60">Status fulfillment dan pembayaran pesanan terbaru</p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-bold">
-              {[['all', 'Semua'], ['awaiting_payment', 'Menunggu Pembayaran'], ['processing', 'Diproses'], ['packed', 'Sudah Dikemas'], ['cancelled', 'Dibatalkan']].map(([value, label]) => <button key={value} onClick={() => setOrderFilter(value)} className={`px-3 py-2 rounded-xl border border-[#2C1E16]/10 ${orderFilter === value ? 'bg-[#FDFBF7]' : ''}`}>{label}</button>)}
+              {[['all', 'Semua'], ['awaiting_payment', 'Menunggu Pembayaran'], ['processing', 'Diproses'], ['packed', 'Sudah Dikemas'], ['pickup_requested', 'Menunggu Pickup'], ['shipped', 'Dikirim'], ['delivered', 'Sampai'], ['cancelled', 'Dibatalkan']].map(([value, label]) => <button key={value} onClick={() => setOrderFilter(value)} className={`px-3 py-2 rounded-xl border border-[#2C1E16]/10 ${orderFilter === value ? 'bg-[#FDFBF7]' : ''}`}>{label}</button>)}
             </div>
           </div>
 
@@ -235,7 +237,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                       <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{order.items?.[0]?.product_name || 'Produk'}</td>
                       <td className="p-4 font-bold">Rp {Number(order.total_amount || 0).toLocaleString('id-ID')}</td>
                       <td className="p-4">
-                        <span className="rounded-full bg-[#D4813E]/10 px-3 py-1 text-[11px] font-bold text-[#D4813E] uppercase">{order.status}</span>
+                        <span className="rounded-full bg-[#D4813E]/10 px-3 py-1 text-[11px] font-bold text-[#D4813E] uppercase">{orderStatusLabel(order.status)}</span>
                         <div className="mt-1 text-[10px] font-bold uppercase text-[#2C1E16]/50">Payment: {order.payment_status}</div>
                         <div className="text-[10px] text-[#2C1E16]/50">{order.payment_bank_name || '-'} · {order.va_number || '-'}</div>
                       </td>
@@ -245,7 +247,10 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                         {order.status === 'awaiting_payment' && order.payment_status === 'paid' && <button onClick={() => router.post(route('admin.orders.process', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Proses Pesanan</button>}
                         {order.status === 'processing' && <button onClick={() => router.post(route('admin.orders.packed', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Tandai Sudah Dikemas</button>}
                         {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('admin.orders.cancel', order.order_id), {}, { preserveScroll: true })} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600">Batalkan</button>}
-                        {order.status === 'packed' && <span className="text-xs font-bold text-[#D4813E]">Siap Pickup</span>}
+                        {order.status === 'packed' && <div className="inline-flex flex-wrap items-center justify-end gap-2"><select value={courierAssignments[order.order_id] || ''} onChange={(event) => setCourierAssignments({ ...courierAssignments, [order.order_id]: event.target.value })} className="rounded-xl border border-[#2C1E16]/10 px-3 py-2 text-xs"><option value="">Pilih Courier</option>{couriers.map((courier) => <option key={courier.id} value={courier.id}>{courier.name}</option>)}</select><button disabled={!courierAssignments[order.order_id]} onClick={() => router.post(route('admin.orders.request-pickup', order.order_id), { courier_id: courierAssignments[order.order_id] }, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Request Pickup</button></div>}
+                        {['pickup_requested', 'picked_up', 'shipped'].includes(order.status) && <div className="text-xs font-bold text-[#D4813E]">Courier: {order.courier?.name || '-'}{order.tracking_number ? ` · ${order.tracking_number}` : ''}</div>}
+                        {order.status === 'delivered' && <span className="text-xs font-bold text-[#D4813E]">Sudah Sampai</span>}
+                        {order.status === 'completed' && <span className="text-xs font-bold text-[#D4813E]">Selesai</span>}
                       </td>
                     </tr>
                   ))

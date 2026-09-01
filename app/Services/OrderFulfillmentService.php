@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrderFulfillmentService
 {
@@ -33,5 +35,55 @@ class OrderFulfillmentService
                 }
             } $order->update(['status' => 'cancelled', 'stock_released_at' => now()]);
         });
+    }
+
+    public function requestPickup(Order $order, User $courier): void
+    {
+        abort_unless($courier->isCourier(), 422, 'Courier yang dipilih tidak valid.');
+        abort_unless($order->status === 'packed' && $order->payment_status === 'paid', 422, 'Pickup hanya dapat diminta untuk pesanan yang sudah dikemas dan dibayar.');
+
+        $order->update(['courier_id' => $courier->id, 'status' => 'pickup_requested']);
+    }
+
+    public function confirmPickup(Order $order): void
+    {
+        abort_unless($order->status === 'pickup_requested', 422, 'Pesanan tidak berada pada tahap pickup.');
+        $order->update(['status' => 'picked_up', 'picked_up_at' => now()]);
+    }
+
+    public function setTrackingNumber(Order $order, ?string $trackingNumber = null): void
+    {
+        abort_unless($order->status === 'picked_up', 422, 'Resi hanya dapat dibuat setelah pickup dikonfirmasi.');
+        abort_unless(! $order->tracking_number, 422, 'Nomor resi sudah dikunci.');
+
+        $trackingNumber ??= $this->uniqueTrackingNumber();
+        $order->update(['tracking_number' => $trackingNumber]);
+    }
+
+    public function startShipping(Order $order): void
+    {
+        abort_unless($order->status === 'picked_up' && $order->tracking_number, 422, 'Nomor resi wajib tersedia sebelum pengiriman dimulai.');
+        $order->update(['status' => 'shipped', 'shipped_at' => now()]);
+    }
+
+    public function markDelivered(Order $order): void
+    {
+        abort_unless($order->status === 'shipped', 422, 'Hanya pesanan dalam pengiriman yang dapat ditandai sampai.');
+        $order->update(['status' => 'delivered', 'delivered_at' => now()]);
+    }
+
+    public function complete(Order $order): void
+    {
+        abort_unless($order->status === 'delivered', 422, 'Pesanan hanya dapat diselesaikan setelah sampai tujuan.');
+        $order->update(['status' => 'completed']);
+    }
+
+    private function uniqueTrackingNumber(): string
+    {
+        do {
+            $trackingNumber = 'TRK-'.strtoupper(Str::random(10));
+        } while (Order::where('tracking_number', $trackingNumber)->exists());
+
+        return $trackingNumber;
     }
 }

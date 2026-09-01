@@ -1,13 +1,20 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { MapPin, Phone } from 'lucide-react';
+import { orderStatusLabel } from '../../utils/orderStatus';
 
-export default function CourierDashboard() {
-    return <main className="min-h-screen bg-[#FDFBF7] p-6 text-[#2C1E16] sm:p-12">
+export default function CourierDashboard({ orders = [], overview = {} }) {
+    const trackingForm = useForm({ tracking_number: '' });
+    const saveTracking = (event, order) => {
+        event.preventDefault();
+        trackingForm.post(route('courier.orders.save-tracking', order.order_id), { preserveScroll: true, onSuccess: () => trackingForm.reset() });
+    };
+
+    return <main className="min-h-screen bg-[#FDFBF7] p-6 text-[#2C1E16] sm:p-10">
         <Head title="Courier Dashboard" />
-        <section className="mx-auto max-w-2xl rounded-3xl border border-[#2C1E16]/10 bg-white p-8 shadow-sm">
-            <p className="text-sm font-bold uppercase tracking-widest text-[#D4813E]">Kopi Gajahmada</p>
-            <h1 className="mt-3 text-3xl font-bold">Courier Dashboard</h1>
-            <p className="mt-3 text-[#2C1E16]/70">Fitur courier akan dikembangkan pada tahap berikutnya.</p>
-            <Link href={route('logout')} method="post" as="button" className="mt-7 rounded-xl bg-[#2C1E16] px-4 py-2 text-sm font-semibold text-white">Keluar</Link>
-        </section>
+        <div className="mx-auto max-w-6xl">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-[#D4813E]">Kopi Gajahmada</p><h1 className="mt-2 text-3xl font-bold">Courier Dashboard</h1><p className="mt-1 text-sm text-[#2C1E16]/60">Kelola pickup dan pengiriman yang ditugaskan kepada Anda.</p></div><Link href={route('logout')} method="post" as="button" className="rounded-xl bg-[#2C1E16] px-4 py-2 text-sm font-semibold text-white">Keluar</Link></div>
+            <section className="mb-8 grid gap-4 sm:grid-cols-3">{[['Pickup Baru', overview.newPickups || 0], ['Sedang Dikirim', overview.inDelivery || 0], ['Selesai Hari Ini', overview.completedToday || 0]].map(([label, value]) => <div key={label} className="rounded-3xl border border-[#2C1E16]/10 bg-white p-5 shadow-sm"><p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">{label}</p><p className="mt-2 text-3xl font-bold text-[#D4813E]">{value}</p></div>)}</section>
+            <section className="rounded-3xl border border-[#2C1E16]/10 bg-white p-6 shadow-sm sm:p-8"><div className="mb-6"><h2 className="text-xl font-bold">Pickup Request & Pengiriman</h2><p className="mt-1 text-sm text-[#2C1E16]/60">Hanya pesanan yang ditugaskan kepada Anda ditampilkan.</p></div><div className="space-y-5">{orders.length === 0 && <p className="rounded-2xl bg-[#FDFBF7] p-5 text-sm text-[#2C1E16]/60">Belum ada pesanan yang ditugaskan.</p>}{orders.map((order) => <article key={order.order_id} className="rounded-2xl border border-[#2C1E16]/10 p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{order.order_number}</p><p className="mt-1 text-xs text-[#2C1E16]/60">{order.items?.map((item) => `${item.product_name} × ${item.qty}`).join(', ') || 'Produk'}</p></div><span className="rounded-full bg-[#D4813E]/10 px-3 py-1 text-xs font-bold text-[#D4813E]">{orderStatusLabel(order.status)}</span></div><div className="mt-4 grid gap-3 text-sm md:grid-cols-2"><p className="flex gap-2"><Phone size={16} className="shrink-0 text-[#D4813E]" />{order.customer_name} · {order.customer_phone}</p><p className="flex gap-2"><MapPin size={16} className="shrink-0 text-[#D4813E]" />{order.customer_address}</p><p><b>Brew:</b> {order.items?.[0]?.brew_method || '-'}</p><p><b>Catatan:</b> {order.customer_note || 'Tidak ada'}</p><p><b>Pengiriman:</b> {order.shipping_method === 'instant' ? 'Instant' : 'Reguler'}</p><p><b>Resi:</b> {order.tracking_number || 'Belum tersedia'}</p></div><div className="mt-5 flex flex-wrap gap-2">{order.status === 'pickup_requested' && <button onClick={() => router.post(route('courier.orders.confirm-pickup', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Konfirmasi Pickup</button>}{order.status === 'picked_up' && !order.tracking_number && <><button onClick={() => router.post(route('courier.orders.generate-tracking', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Generate Resi</button><form onSubmit={(event) => saveTracking(event, order)} className="flex gap-2"><input value={trackingForm.data.tracking_number} onChange={(event) => trackingForm.setData('tracking_number', event.target.value)} placeholder="Input resi manual" className="rounded-xl border border-[#2C1E16]/15 px-3 py-2 text-sm" /><button className="rounded-xl border border-[#2C1E16]/15 px-3 py-2 text-sm font-bold">Simpan Resi</button></form></>}{order.status === 'picked_up' && order.tracking_number && <button onClick={() => router.post(route('courier.orders.start-shipping', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Mulai Pengiriman</button>}{order.status === 'shipped' && <button onClick={() => router.post(route('courier.orders.delivered', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Tandai Sudah Sampai</button>}</div></article>)}</div></section>
+        </div>
     </main>;
 }

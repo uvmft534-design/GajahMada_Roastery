@@ -16,4 +16,9 @@ class OrderPolicy
     {
         return $this->view($user, $order);
     }
+
+    public function courier(User $user, Order $order): bool
+    {
+        return $user->isCourier() && $order->courier_id === $user->id;
+    }
 }

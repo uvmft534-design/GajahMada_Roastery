@@ -4,8 +4,13 @@ import { orderStatusLabel } from '../utils/orderStatus';
 import { PackageCheck, MapPin, Truck, CheckCircle2 } from 'lucide-react';
 
 export default function OrderTracking({ order }) {
-  const statuses = ['pending', 'shipped', 'completed', 'cancelled'];
-  const currentIndex = statuses.indexOf(order.status);
+  const steps = [['Pesanan Dibuat', 'awaiting_payment'], ['Pembayaran Dikonfirmasi', 'payment_confirmed'], ['Sedang Diproses', 'processing'], ['Sudah Dikemas', 'packed'], ['Menunggu Pickup', 'pickup_requested'], ['Dijemput Kurir', 'picked_up'], ['Dalam Pengiriman', 'shipped'], ['Sampai Tujuan', 'delivered'], ['Selesai', 'completed']];
+  const statusIndex = ['awaiting_payment', 'processing', 'packed', 'pickup_requested', 'picked_up', 'shipped', 'delivered', 'completed'].indexOf(order.status);
+  const stepState = (key, index) => {
+    if (key === 'payment_confirmed') return order.payment_status === 'paid' ? 'done' : 'future';
+    const adjustedIndex = index === 0 ? 0 : index - 1;
+    return adjustedIndex < statusIndex ? 'done' : adjustedIndex === statusIndex ? 'current' : 'future';
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16]">
@@ -30,24 +35,11 @@ export default function OrderTracking({ order }) {
             </div>
             <div className="text-right">
               <div className="text-xs uppercase tracking-wider text-[#2C1E16]/50">Nomor Tracking</div>
-              <div className="font-bold mt-2">{order.tracking_number}</div>
+              <div className="font-bold mt-2">{order.tracking_number || 'Belum tersedia'}</div>
             </div>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-4 gap-4">
-            {['Pesanan Dibuat', 'Dalam Proses', 'Dikirim', 'Selesai'].map((label, idx) => (
-              <div key={label} className="rounded-2xl border p-4 text-center">
-                <div className="flex items-center justify-center">
-                  {currentIndex >= idx ? (
-                    <CheckCircle2 size={24} className="text-emerald-600" />
-                  ) : (
-                    <Truck size={24} className="text-[#2C1E16]/30" />
-                  )}
-                </div>
-                <div className="mt-3 text-xs font-bold text-[#2C1E16]/60 uppercase">{label}</div>
-              </div>
-            ))}
-          </div>
+          {order.status === 'cancelled' ? <div className="mt-10 rounded-2xl border border-red-200 bg-red-50 p-5 text-center font-bold text-red-700">Pesanan Dibatalkan</div> : <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{steps.map(([label, key], index) => { const state = stepState(key, index); return <div key={key} className={`rounded-2xl border p-4 ${state === 'current' ? 'border-[#D4813E] bg-orange-50' : state === 'done' ? 'border-emerald-200 bg-emerald-50' : 'border-[#2C1E16]/10'}`}><div className="flex items-center gap-3">{state === 'done' ? <CheckCircle2 size={22} className="text-emerald-600" /> : <div className={`h-5 w-5 rounded-full border-2 ${state === 'current' ? 'border-[#D4813E] bg-[#D4813E]' : 'border-[#2C1E16]/20'}`} />}<div><div className="text-xs font-bold uppercase text-[#2C1E16]/70">{label}</div><div className="mt-1 text-[11px] text-[#2C1E16]/50">{state === 'done' ? 'Selesai' : state === 'current' ? 'Status saat ini' : 'Menunggu'}</div></div></div></div>})}</div>}
 
           <div className="mt-8 grid md:grid-cols-2 gap-5">
             <div className="rounded-3xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-5">
