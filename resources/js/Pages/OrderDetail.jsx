@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, UploadCloud, CheckCircle2, Star } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
+
+function ReviewForm({ order, item }) {
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const { data, setData, post, processing, errors } = useForm({ rating: 0, comment: '' });
+  const displayedRating = hoveredRating || data.rating;
+
+  const submit = (event) => {
+    event.preventDefault();
+    post(route('orders.items.review.store', [order.order_id, item.order_item_id]), { preserveScroll: true });
+  };
+
+  return <form onSubmit={submit} className="mt-4 border-t border-[#2C1E16]/10 pt-4">
+    <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Beri Penilaian</div>
+    <div className="mt-2 flex items-center gap-1" onMouseLeave={() => setHoveredRating(0)}>{[1, 2, 3, 4, 5].map((rating) => <button key={rating} type="button" onMouseEnter={() => setHoveredRating(rating)} onClick={() => setData('rating', rating)} aria-label={`Beri rating ${rating} dari 5`} className="rounded p-1 text-[#D4813E]"><Star size={20} fill={rating <= displayedRating ? 'currentColor' : 'none'} /></button>)}</div>
+    {errors.rating && <p className="mt-1 text-xs text-red-600">{errors.rating}</p>}
+    <textarea value={data.comment} onChange={(event) => setData('comment', event.target.value)} maxLength="1000" placeholder="Tulis komentar (opsional)" className="mt-3 w-full rounded-xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-3 text-sm" />
+    {errors.comment && <p className="mt-1 text-xs text-red-600">{errors.comment}</p>}
+    <button disabled={processing || !data.rating} className="mt-3 rounded-xl bg-[#D4813E] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Kirim Penilaian</button>
+  </form>;
+}
 
 export default function OrderDetail({ order, items = [] }) {
   const statusLabel = orderStatusLabel(order.status);
@@ -97,6 +117,7 @@ export default function OrderDetail({ order, items = [] }) {
                       <div className="font-bold text-sm">{item.product_name}</div>
                       <div className="text-xs text-[#2C1E16]/50 mt-1">Qty: {item.qty} • {item.product_category || 'Coffee'}</div>
                       <div className="text-xs text-[#2C1E16]/60 mt-1">Brew Method: {item.brew_method === 'espresso' ? 'Espresso' : item.brew_method === 'filter' ? 'Filter' : '—'}</div>
+                      {order.status === 'completed' && (item.review ? <div className="mt-4 border-t border-[#2C1E16]/10 pt-4"><div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Penilaian Anda</div><div className="mt-2 flex gap-1 text-[#D4813E]">{[1, 2, 3, 4, 5].map((rating) => <Star key={rating} size={17} fill={rating <= item.review.rating ? 'currentColor' : 'none'} />)}</div>{item.review.comment && <p className="mt-2 text-sm text-[#2C1E16]/70">{item.review.comment}</p>}</div> : <ReviewForm order={order} item={item} />)}
                     </div>
                     <div className="font-bold text-[#D4813E]">{money.format(item.subtotal || item.unit_price * item.qty)}</div>
                   </div>

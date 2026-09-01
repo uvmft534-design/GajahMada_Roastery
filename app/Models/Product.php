@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
@@ -20,29 +21,15 @@ class Product extends Model
         'stock',
         'description',
         'image',
-        'rating',
-        'rating_count',
     ];
 
     protected $casts = [
         'price' => 'integer',
         'stock' => 'integer',
-        'rating' => 'float',
-        'rating_count' => 'integer',
     ];
 
-    public function addRating(float $rating): void
+    public function reviews(): HasMany
     {
-        $rating = max(0, min(5, $rating));
-        $currentCount = $this->rating_count ?? 0;
-        $currentAverage = $this->rating ?? 0;
-        $newCount = $currentCount + 1;
-        $newAverage = $newCount > 0
-            ? round((($currentAverage * $currentCount) + $rating) / $newCount, 1)
-            : $rating;
-
-        $this->rating = $newAverage;
-        $this->rating_count = $newCount;
-        $this->save();
+        return $this->hasMany(ProductReview::class, 'product_id', 'product_id');
     }
 }

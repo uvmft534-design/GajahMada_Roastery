@@ -66,6 +66,11 @@ class User extends Authenticatable implements MustVerifyEmail // 2. Tambahkan 'i
         return $this->hasMany(Order::class, 'courier_id');
     }
 
+    public function productReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
     public function isCustomer(): bool
     {
         return $this->role === 'customer';

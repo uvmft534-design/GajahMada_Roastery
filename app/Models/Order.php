@@ -62,6 +62,11 @@ class Order extends Model
         return $this->belongsTo(User::class, 'courier_id');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class, 'order_id', 'order_id');
+    }
+
     protected function casts(): array
     {
         return [

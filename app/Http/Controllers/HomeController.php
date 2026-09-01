@@ -11,21 +11,21 @@ class HomeController extends Controller
     public function index()
     {
         return Inertia::render('Index', [
-            'products' => Product::latest()->get(),
+            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest()->get(),
         ]);
     }
 
     public function dashboard()
     {
         return Inertia::render('Dashboard', [
-            'products' => Product::latest()->get(),
+            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest()->get(),
         ]);
     }
 
     public function show($product_id)
     {
         // Langsung cari pakai product_id yang dikirim dari route
-        $product = Product::where('product_id', $product_id)->first();
+        $product = Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->where('product_id', $product_id)->first();
 
         if (! $product) {
             abort(404, 'Produk tidak ditemukan.');
@@ -52,27 +52,6 @@ class HomeController extends Controller
         return Inertia::render('Checkout', [
             'product' => $product,
             'qty' => $qty,
-        ]);
-    }
-
-    public function rate(Request $request, $product_id)
-    {
-        $product = Product::where('product_id', $product_id)->first();
-
-        if (! $product) {
-            abort(404, 'Produk tidak ditemukan.');
-        }
-
-        $validated = $request->validate([
-            'rating' => 'required|numeric|min:0|max:5',
-        ]);
-
-        $product->addRating((float) $validated['rating']);
-
-        return response()->json([
-            'message' => 'Rating produk berhasil diperbarui.',
-            'rating' => $product->rating,
-            'rating_count' => $product->rating_count,
         ]);
     }
 }

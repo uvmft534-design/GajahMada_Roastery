@@ -56,7 +56,7 @@ export default function App() {
       qty: checkoutQty,
       stock: productStock,
       image: product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png',
-      rating: typeof product.rating === 'number' ? Number(product.rating) : 0,
+      rating: typeof product.reviews_avg_rating === 'number' ? Number(product.reviews_avg_rating) : 0,
       color: 'bg-orange-50'
     }];
   });

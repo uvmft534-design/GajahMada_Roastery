@@ -152,7 +152,7 @@ export default function Show() {
               <div className="flex items-center gap-1.5 mb-2 text-[#D4813E]">
                 <Star size={16} fill="currentColor" />
                 <span className="text-sm font-bold text-[#2C1E16]/70">
-                  {Number(product.rating || 0).toFixed(1)} <span className="font-normal text-[#2C1E16]/45">({product.rating_count ?? 0} ulasan)</span>
+                  {Number(product.reviews_avg_rating || 0).toFixed(1)} <span className="font-normal text-[#2C1E16]/45">({product.reviews_count ?? 0} ulasan)</span>
                 </span>
               </div>
               {/* SESUAIKAN JADI product_name */}

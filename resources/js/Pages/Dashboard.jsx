@@ -376,7 +376,7 @@ export default function Dashboard() {
                     <div className="px-1">
                       <div className="flex items-center gap-1 mb-2">
                         <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
-                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(product.rating || 0).toFixed(1)} / 5 ({product.rating_count ?? 0})</span>
+                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(product.reviews_avg_rating || 0).toFixed(1)} / 5 ({product.reviews_count ?? 0})</span>
                       </div>
                       
                       <h3 className="font-bold text-lg mb-1 truncate group-hover:text-[#D4813E] transition-colors">{product.product_name}</h3>

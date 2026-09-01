@@ -314,7 +314,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                         </div>
                       </td>
                       <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{item.category || '-'}</td>
-                      <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{item.rating ? Number(item.rating).toFixed(1) : '0.0'} / 5 ({item.rating_count ?? 0})</td>
+                      <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{item.reviews_avg_rating ? Number(item.reviews_avg_rating).toFixed(1) : '0.0'} / 5 ({item.reviews_count ?? 0})</td>
                       <td className="p-4 max-w-xs truncate text-xs text-[#2C1E16]/70">
                         {item.description || '-'}
                       </td>

@@ -386,7 +386,7 @@ export default function App({ products = [] }) {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1">
                         <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
-                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(item.rating || 0).toFixed(1)} / 5 ({item.rating_count ?? 0})</span>
+                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(item.reviews_avg_rating || 0).toFixed(1)} / 5 ({item.reviews_count ?? 0})</span>
                       </div>
                       <span className="text-[11px] font-medium px-2 py-0.5 bg-orange-100 text-[#D4813E] rounded-full">
                         Stok: {item.stock}

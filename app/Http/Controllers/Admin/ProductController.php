@@ -13,7 +13,7 @@ class ProductController extends Controller
     public function index()
     {
         return Inertia::render('Dashboard_Admin', [
-            'products' => Product::latest('product_id')->get(),
+            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
         ]);
     }
 

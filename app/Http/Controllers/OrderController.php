@@ -20,7 +20,7 @@ class OrderController extends Controller
 {
     public function checkout(Request $request, $product_id)
     {
-        $product = Product::where('product_id', $product_id)->first();
+        $product = Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->where('product_id', $product_id)->first();
 
         if (! $product) {
             abort(404, 'Produk tidak ditemukan.');
@@ -134,7 +134,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $this->authorize('view', $order);
-        $order->load('items.product', 'user', 'courier');
+        $order->load('items.product', 'items.review', 'user', 'courier');
 
         return Inertia::render('OrderDetail', [
             'order' => $order,
@@ -185,7 +185,7 @@ class OrderController extends Controller
         ];
 
         return Inertia::render('Dashboard_Admin', [
-            'products' => Product::latest('product_id')->get(),
+            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
             'orders' => $orders,
             'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
             'analytics' => $analytics,
