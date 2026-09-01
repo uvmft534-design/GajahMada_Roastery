@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { orderStatusLabel } from '../utils/orderStatus';
 import { PackageCheck, MapPin, Truck, CheckCircle2 } from 'lucide-react';
 
 export default function OrderTracking({ order }) {
@@ -25,7 +26,7 @@ export default function OrderTracking({ order }) {
           <div className="flex flex-wrap items-center justify-between">
             <div>
               <div className="text-xs uppercase tracking-wider text-[#2C1E16]/50">Status Saat Ini</div>
-              <div className="text-2xl font-bold text-[#D4813E] mt-2 capitalize">{order.status}</div>
+              <div className="text-2xl font-bold text-[#D4813E] mt-2">{orderStatusLabel(order.status)}</div>
             </div>
             <div className="text-right">
               <div className="text-xs uppercase tracking-wider text-[#2C1E16]/50">Nomor Tracking</div>

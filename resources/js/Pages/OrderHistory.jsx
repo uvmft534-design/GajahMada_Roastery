@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { PackageCheck, Truck, ClipboardCheck } from 'lucide-react';
+import { orderStatusLabel } from '../utils/orderStatus';
 
 export default function OrderHistory({ orders = [] }) {
   const money = new Intl.NumberFormat('id-ID', {
@@ -42,7 +43,7 @@ export default function OrderHistory({ orders = [] }) {
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wide text-[#2C1E16]/50">Status</div>
-                      <div className="font-bold text-[#D4813E] uppercase mt-1">{order.status}</div>
+                      <div className="font-bold text-[#D4813E] uppercase mt-1">{orderStatusLabel(order.status)}</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wide text-[#2C1E16]/50">Total</div>

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { orderStatusLabel } from '../utils/orderStatus';
 
 export default function OrderDetail({ order, items = [] }) {
-  const statusLabel = { awaiting_payment: 'Menunggu Pembayaran', processing: 'Sedang Diproses', packed: 'Sudah Dikemas', cancelled: 'Dibatalkan', shipped: 'Dikirim', completed: 'Selesai' }[order.status] || order.status;
+  const statusLabel = orderStatusLabel(order.status);
   const money = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -109,7 +110,7 @@ export default function OrderDetail({ order, items = [] }) {
               <div className="flex items-start gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#D4813E] mt-1" />
                 <div>
-                  <div className="text-sm font-bold">Pesanan Diproses</div>
+                  <div className="text-sm font-bold">{statusLabel}</div>
                   <div className="text-[11px] text-white/50">Order dibuat</div>
                 </div>
               </div>
