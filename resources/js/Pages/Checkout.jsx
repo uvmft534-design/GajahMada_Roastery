@@ -35,11 +35,13 @@ export default function App() {
   const { data, setData, post, processing, errors } = useForm({
     product_id: product?.product_id ?? '',
     qty: checkoutQty,
+    brew_method: '',
     shipping_method: 'regular',
     payment_method: 'virtual_account',
     customer_name: auth?.user?.name ?? '',
     customer_phone: auth?.user?.phone ?? '',
     customer_address: auth?.user?.address ?? '',
+    customer_note: '',
   });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -61,7 +63,7 @@ export default function App() {
 
   const cartQty = cartItems.reduce((acc, item) => acc + item.qty, 0);
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-  const shippingFee = subtotal > 0 ? 25000 : 0;
+  const shippingFee = subtotal > 0 ? (data.shipping_method === 'instant' ? 30000 : 25000) : 0;
   const total = subtotal + shippingFee;
 
   // Format Rupiah
@@ -356,6 +358,27 @@ export default function App() {
               </div>
             </motion.section>
 
+            {/* --- BREW METHOD --- */}
+            {cartItems.length > 0 && (
+              <motion.section variants={fadeInUp} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-[#2C1E16]/5">
+                <h2 className="text-xl font-bold">Preferensi Seduhan</h2>
+                <p className="mt-1 text-sm text-[#2C1E16]/60">Pilih metode seduh untuk pesanan ini.</p>
+                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { value: 'espresso', title: 'ESPRESSO', description: 'Bold, rich, concentrated' },
+                    { value: 'filter', title: 'FILTER', description: 'Clean, aromatic, balanced' },
+                  ].map((method) => (
+                    <label key={method.value} className={`cursor-pointer rounded-2xl border p-5 transition-colors ${data.brew_method === method.value ? 'border-[#D4813E] bg-[#FFE9D2]/50 ring-1 ring-[#D4813E]' : 'border-[#2C1E16]/10 bg-[#FDFBF7] hover:border-[#D4813E]/50'}`}>
+                      <input type="radio" name="brew_method" value={method.value} checked={data.brew_method === method.value} onChange={(event) => setData('brew_method', event.target.value)} className="sr-only" />
+                      <span className="block text-sm font-bold tracking-wide">{method.title}</span>
+                      <span className="mt-1 block text-xs text-[#2C1E16]/60">{method.description}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.brew_method && <p className="mt-3 text-red-500 text-xs font-medium">{errors.brew_method}</p>}
+              </motion.section>
+            )}
+
             {/* --- SHIPPING INFO --- */}
             {cartItems.length > 0 && (
               <motion.section variants={fadeInUp} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-[#2C1E16]/5">
@@ -376,16 +399,32 @@ export default function App() {
 
                   <div className="flex flex-col gap-2 md:col-span-2">
                     <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Alamat Lengkap</label>
-                    <textarea rows="3" value={data.customer_address} onChange={(e) => setData('customer_address', e.target.value)} placeholder="Nama jalan, gedung, RT/RW..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all resize-none"></textarea>
+                    <textarea rows="3" maxLength="1000" value={data.customer_address} onChange={(e) => setData('customer_address', e.target.value)} placeholder="Nama jalan, gedung, RT/RW..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all resize-none"></textarea>
                     {errors.customer_address && <span className="text-red-500 text-xs">{errors.customer_address}</span>}
                   </div>
 
                   <div className="flex flex-col gap-2 md:col-span-2">
+                    <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Catatan Pesanan <span className="normal-case font-normal">(opsional)</span></label>
+                    <textarea rows="3" maxLength="500" value={data.customer_note} onChange={(e) => setData('customer_note', e.target.value)} placeholder="Contoh: grind jangan terlalu halus, packing double, atau catatan lainnya..." className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all resize-none"></textarea>
+                    <span className="text-right text-xs text-[#2C1E16]/50">{data.customer_note.length} / 500</span>
+                    {errors.customer_note && <span className="text-red-500 text-xs">{errors.customer_note}</span>}
+                  </div>
+
+                  <div className="flex flex-col gap-2 md:col-span-2">
                     <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Metode Pengiriman</label>
-                    <select value={data.shipping_method} onChange={(e) => setData('shipping_method', e.target.value)} className="w-full bg-[#FDFBF7] border border-[#2C1E16]/10 rounded-xl px-4 py-3 outline-none focus:border-[#D4813E] focus:ring-1 focus:ring-[#D4813E] transition-all">
-                      <option value="regular">Regular</option>
-                      <option value="instant">Instant</option>
-                    </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[
+                        { value: 'regular', title: 'REGULAR', price: 'Rp25.000', description: 'Pengiriman standar' },
+                        { value: 'instant', title: 'INSTANT', price: 'Rp30.000', description: 'Pengiriman prioritas' },
+                      ].map((shipping) => (
+                        <label key={shipping.value} className={`cursor-pointer rounded-2xl border p-4 transition-colors ${data.shipping_method === shipping.value ? 'border-[#D4813E] bg-[#FFE9D2]/50 ring-1 ring-[#D4813E]' : 'border-[#2C1E16]/10 bg-[#FDFBF7] hover:border-[#D4813E]/50'}`}>
+                          <input type="radio" name="shipping_method" value={shipping.value} checked={data.shipping_method === shipping.value} onChange={(event) => setData('shipping_method', event.target.value)} className="sr-only" />
+                          <span className="block text-sm font-bold">{shipping.title}</span>
+                          <span className="mt-1 block text-sm font-semibold text-[#D4813E]">{shipping.price}</span>
+                          <span className="mt-1 block text-xs text-[#2C1E16]/60">{shipping.description}</span>
+                        </label>
+                      ))}
+                    </div>
                     {errors.shipping_method && <span className="text-red-500 text-xs">{errors.shipping_method}</span>}
                   </div>
                 </form>

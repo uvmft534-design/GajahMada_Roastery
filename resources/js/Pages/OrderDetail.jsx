@@ -82,11 +82,17 @@ export default function OrderDetail({ order, items = [] }) {
                     <div>
                       <div className="font-bold text-sm">{item.product_name}</div>
                       <div className="text-xs text-[#2C1E16]/50 mt-1">Qty: {item.qty} • {item.product_category || 'Coffee'}</div>
+                      <div className="text-xs text-[#2C1E16]/60 mt-1">Brew Method: {item.brew_method === 'espresso' ? 'Espresso' : item.brew_method === 'filter' ? 'Filter' : '—'}</div>
                     </div>
                     <div className="font-bold text-[#D4813E]">{money.format(item.subtotal || item.unit_price * item.qty)}</div>
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-[#FDFBF7] p-4 border border-[#2C1E16]/10">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Catatan Pesanan</div>
+              <div className="mt-2 text-sm text-[#2C1E16]/70 whitespace-pre-line">{order.customer_note || 'Tidak ada catatan.'}</div>
             </div>
           </div>
 

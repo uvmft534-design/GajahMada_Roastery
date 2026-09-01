@@ -41,11 +41,13 @@ class OrderController extends Controller
         $validated = $request->validate([
             'product_id' => 'required|exists:products,product_id',
             'qty' => 'required|integer|min:1',
+            'brew_method' => 'required|in:espresso,filter',
             'shipping_method' => 'required|in:instant,regular',
             'payment_method' => 'required|in:virtual_account',
-            'customer_name' => 'nullable|string|max:255',
-            'customer_phone' => 'nullable|string|max:50',
-            'customer_address' => 'nullable|string',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:30',
+            'customer_address' => 'required|string|max:1000',
+            'customer_note' => 'nullable|string|max:500',
         ]);
 
         $order = DB::transaction(function () use ($validated) {
@@ -73,9 +75,10 @@ class OrderController extends Controller
                 'payment_method' => 'virtual_account',
                 'payment_status' => 'unpaid',
                 'va_number' => '880'.random_int(1000000000, 9999999999),
-                'customer_name' => $validated['customer_name'] ?? ($user?->name ?? null),
-                'customer_phone' => $validated['customer_phone'] ?? ($user?->phone ?? null),
-                'customer_address' => $validated['customer_address'] ?? ($user?->address ?? null),
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_address' => $validated['customer_address'],
+                'customer_note' => $validated['customer_note'] ?? null,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
                 'total_amount' => $total,
@@ -90,6 +93,7 @@ class OrderController extends Controller
                 'qty' => $validated['qty'],
                 'unit_price' => (int) $product->price,
                 'subtotal' => $subtotal,
+                'brew_method' => $validated['brew_method'],
             ]);
 
             $product->decrement('stock', $validated['qty']);

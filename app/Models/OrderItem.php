@@ -17,6 +17,7 @@ class OrderItem extends Model
         'qty',
         'unit_price',
         'subtotal',
+        'brew_method',
     ];
 
     public function order(): BelongsTo
