@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PaymentSettingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdminController;
 use Illuminate\Support\Facades\Route;
@@ -43,12 +44,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(function () {
     Route::get('/admin/dashboard', [OrderController::class, 'adminIndex'])->name('admin.dashboard');
     Route::post('/admin/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
-    Route::post('/admin/orders/{order}/va', [OrderController::class, 'updateVaNumber'])->name('admin.orders.va');
     Route::post('/admin/orders/{order}/approve-payment', [OrderController::class, 'approvePayment'])->name('admin.orders.approvePayment');
+    Route::post('/admin/orders/{order}/reject-payment', [OrderController::class, 'rejectPayment'])->name('admin.orders.rejectPayment');
     Route::post('/admin/products', [ProductController::class, 'store'])->name('admin.products.store');
     Route::post('/admin/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/admin/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
 });
+
+Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->get('/admin/payment-settings', [PaymentSettingController::class, 'index'])->name('admin.payment-settings.index');
+Route::middleware(['auth', 'verified', 'role:admin'])->post('/admin/payment-settings/requests', [PaymentSettingController::class, 'requestChange'])->name('admin.payment-settings.requests.store');
 
 Route::middleware(['auth', 'verified', 'role:courier'])->get('/courier/dashboard', fn () => Inertia::render('Courier/Dashboard'))->name('courier.dashboard');
 
@@ -56,4 +60,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [SuperAdminController::class, 'users'])->name('users.index');
     Route::patch('/users/{user}/role', [SuperAdminController::class, 'updateRole'])->name('users.role.update');
+    Route::get('/payment-settings', [SuperAdminController::class, 'paymentSettings'])->name('payment-settings.index');
+    Route::post('/payment-settings', [SuperAdminController::class, 'createInitialPaymentSetting'])->name('payment-settings.store');
+    Route::post('/payment-settings/requests/{paymentSettingChangeRequest}/review', [SuperAdminController::class, 'reviewPaymentSettingChange'])->name('payment-settings.requests.review');
 });

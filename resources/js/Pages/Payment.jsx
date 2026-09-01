@@ -19,6 +19,7 @@ export default function Payment({ order }) {
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   };
+  const canUpload = ['unpaid', 'rejected'].includes(order.payment_status);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16] font-sans">
@@ -48,7 +49,8 @@ export default function Payment({ order }) {
             </div>
 
             <div className="mt-8 rounded-3xl bg-[#FDFBF7] border border-[#2C1E16]/10 p-6">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Nomor Virtual Account</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">{order.payment_bank_name || 'Bank'}</p>
+              <p className="mt-1 text-sm font-semibold">{order.payment_account_name || 'Company Payment Account'}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="text-2xl md:text-3xl tracking-[0.12em] font-bold text-[#2C1E16]">{order.va_number}</span>
                 <button type="button" onClick={copyVaNumber} className="inline-flex items-center gap-2 rounded-full border border-[#2C1E16]/15 px-4 py-2 text-xs font-bold hover:bg-[#2C1E16] hover:text-white transition-colors">
@@ -58,7 +60,8 @@ export default function Payment({ order }) {
               <p className="text-sm text-[#2C1E16]/60 mt-4">Transfer tepat sesuai total tagihan, lalu unggah bukti pembayaran di bawah ini.</p>
             </div>
 
-            <form onSubmit={uploadProof} className="mt-8">
+            {order.payment_status === 'rejected' && <p className="mt-6 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</p>}
+            {canUpload && <form onSubmit={uploadProof} className="mt-8">
               <label className="text-xs font-bold text-[#2C1E16]/60 uppercase tracking-wider">Upload Bukti Pembayaran</label>
               <label className="mt-3 min-h-32 flex flex-col items-center justify-center gap-3 px-5 py-6 rounded-3xl border-2 border-dashed border-[#2C1E16]/15 bg-[#FDFBF7] cursor-pointer hover:border-[#D4813E] transition-colors">
                 <UploadCloud size={28} className="text-[#D4813E]" />
@@ -70,7 +73,8 @@ export default function Payment({ order }) {
               <button type="submit" disabled={processing || !data.proof} className="mt-5 w-full h-14 rounded-full bg-[#D4813E] text-white font-bold shadow-lg shadow-[#D4813E]/20 hover:bg-[#b86b30] disabled:opacity-50 transition-colors">
                 {processing ? 'Mengirim...' : 'Kirim Bukti Pembayaran'}
               </button>
-            </form>
+            </form>}
+            {!canUpload && <p className="mt-6 text-sm text-[#2C1E16]/60">{order.payment_status === 'paid' ? 'Pembayaran telah dikonfirmasi.' : 'Bukti pembayaran sedang menunggu konfirmasi.'}</p>}
           </section>
 
           <aside className="bg-[#2C1E16] text-[#FDFBF7] rounded-[2rem] shadow-xl p-7 md:p-8 sticky top-8">

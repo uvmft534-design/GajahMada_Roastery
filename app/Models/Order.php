@@ -22,6 +22,11 @@ class Order extends Model
         'payment_status',
         'payment_proof',
         'va_number',
+        'payment_bank_name',
+        'payment_account_name',
+        'payment_review_note',
+        'payment_reviewed_by',
+        'payment_reviewed_at',
         'customer_name',
         'customer_phone',
         'customer_address',
@@ -40,5 +45,10 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
+    }
+
+    public function paymentReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'payment_reviewed_by');
     }
 }

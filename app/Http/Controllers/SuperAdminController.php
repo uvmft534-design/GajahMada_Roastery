@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentSetting;
+use App\Models\PaymentSettingChangeRequest;
 use App\Models\RoleChangeLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -56,5 +58,44 @@ class SuperAdminController extends Controller
         }
 
         return back()->with('success', 'Role pengguna berhasil diperbarui.');
+    }
+
+    public function paymentSettings(): Response
+    {
+        return Inertia::render('SuperAdmin/PaymentSettings', [
+            'activeSetting' => PaymentSetting::with('creator')->where('is_active', true)->first(),
+            'history' => PaymentSetting::with('creator')->latest()->get(),
+            'requests' => PaymentSettingChangeRequest::with(['requester', 'reviewer', 'currentPaymentSetting'])->latest()->get(),
+        ]);
+    }
+
+    public function createInitialPaymentSetting(Request $request): RedirectResponse
+    {
+        abort_if(PaymentSetting::where('is_active', true)->exists(), 422, 'Payment Account aktif sudah tersedia.');
+        $data = $request->validate(['bank_name' => 'required|string|max:100', 'account_name' => 'required|string|max:255', 'account_number' => 'required|string|max:100']);
+        PaymentSetting::create($data + ['is_active' => true, 'created_by' => $request->user()->id]);
+
+        return back()->with('success', 'Payment Account berhasil diaktifkan.');
+    }
+
+    public function reviewPaymentSettingChange(Request $request, PaymentSettingChangeRequest $paymentSettingChangeRequest): RedirectResponse
+    {
+        $data = $request->validate(['action' => 'required|in:approve,reject', 'review_note' => 'nullable|string|max:1000']);
+        if ($data['action'] === 'reject' && blank($data['review_note'] ?? null)) {
+            return back()->withErrors(['review_note' => 'Alasan penolakan wajib diisi.']);
+        }
+        DB::transaction(function () use ($request, $paymentSettingChangeRequest, $data): void {
+            $change = PaymentSettingChangeRequest::lockForUpdate()->findOrFail($paymentSettingChangeRequest->id);
+            abort_if($change->status !== 'pending', 422, 'Request ini tidak lagi menunggu review.');
+            $active = PaymentSetting::where('is_active', true)->lockForUpdate()->first();
+            if ($data['action'] === 'approve') {
+                abort_if(! $active || $active->id !== $change->current_payment_setting_id, 422, 'Request sudah tidak sesuai dengan Payment Account aktif.');
+                $active->update(['is_active' => false]);
+                PaymentSetting::create(['bank_name' => $change->proposed_bank_name, 'account_name' => $change->proposed_account_name, 'account_number' => $change->proposed_account_number, 'is_active' => true, 'created_by' => $request->user()->id]);
+            }
+            $change->update(['status' => $data['action'] === 'approve' ? 'approved' : 'rejected', 'reviewed_by' => $request->user()->id, 'reviewed_at' => now(), 'review_note' => $data['review_note'] ?? null]);
+        });
+
+        return back()->with('success', 'Request Payment Account telah direview.');
     }
 }

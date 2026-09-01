@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PaymentSetting;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,7 +51,12 @@ class OrderController extends Controller
             'customer_note' => 'nullable|string|max:500',
         ]);
 
-        $order = DB::transaction(function () use ($validated) {
+        $paymentSetting = PaymentSetting::where('is_active', true)->first();
+        if (! $paymentSetting) {
+            return back()->withErrors(['payment_method' => 'Metode pembayaran sedang belum tersedia. Silakan coba kembali nanti.']);
+        }
+
+        $order = DB::transaction(function () use ($validated, $paymentSetting) {
             // Lock row produk agar checkout bersamaan tidak dapat menjual stok yang sama.
             $product = Product::where('product_id', $validated['product_id'])
                 ->lockForUpdate()
@@ -74,7 +80,9 @@ class OrderController extends Controller
                 'shipping_method' => $validated['shipping_method'],
                 'payment_method' => 'virtual_account',
                 'payment_status' => 'unpaid',
-                'va_number' => '880'.random_int(1000000000, 9999999999),
+                'va_number' => $paymentSetting->account_number,
+                'payment_bank_name' => $paymentSetting->bank_name,
+                'payment_account_name' => $paymentSetting->account_name,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'customer_address' => $validated['customer_address'],
@@ -190,6 +198,8 @@ class OrderController extends Controller
     {
         $this->authorize('update', $order);
 
+        abort_unless(in_array($order->payment_status, ['unpaid', 'rejected'], true), 422, 'Bukti pembayaran tidak dapat diunggah pada status saat ini.');
+
         $request->validate([
             'proof' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
@@ -203,38 +213,36 @@ class OrderController extends Controller
             $order->update([
                 'payment_proof' => $path,
                 'payment_status' => 'pending_confirmation',
+                'payment_review_note' => null,
+                'payment_reviewed_by' => null,
+                'payment_reviewed_at' => null,
             ]);
         }
 
         return redirect()->back()->with('success', 'Bukti pembayaran berhasil diunggah.');
     }
 
-    public function updateVaNumber(Request $request, Order $order)
-    {
-        $request->validate([
-            'va_number' => 'nullable|string|max:50',
-        ]);
-
-        $order->update([
-            'va_number' => $request->va_number,
-            'payment_status' => $order->payment_status === 'unpaid' ? 'unpaid' : $order->payment_status,
-        ]);
-
-        return redirect()->back()->with('success', 'Nomor VA berhasil diperbarui.');
-    }
-
     public function approvePayment(Request $request, Order $order)
     {
-        $request->validate([
-            'payment_status' => 'required|in:paid,unpaid,pending_confirmation,rejected',
-        ]);
+        abort_unless($order->payment_status === 'pending_confirmation', 422, 'Pembayaran tidak dapat dikonfirmasi pada status saat ini.');
 
         $order->update([
-            'payment_status' => $request->payment_status,
-            'status' => $request->payment_status === 'paid' ? 'pending' : $order->status,
+            'payment_status' => 'paid',
+            'payment_review_note' => $request->input('review_note'),
+            'payment_reviewed_by' => $request->user()->id,
+            'payment_reviewed_at' => now(),
         ]);
 
         return redirect()->back()->with('success', 'Status pembayaran berhasil disimpan.');
+    }
+
+    public function rejectPayment(Request $request, Order $order)
+    {
+        abort_unless($order->payment_status === 'pending_confirmation', 422, 'Pembayaran tidak dapat ditolak pada status saat ini.');
+        $validated = $request->validate(['review_note' => 'required|string|max:1000']);
+        $order->update(['payment_status' => 'rejected', 'payment_review_note' => $validated['review_note'], 'payment_reviewed_by' => $request->user()->id, 'payment_reviewed_at' => now()]);
+
+        return back()->with('success', 'Bukti pembayaran ditolak.');
     }
 
     public function complete(Order $order)

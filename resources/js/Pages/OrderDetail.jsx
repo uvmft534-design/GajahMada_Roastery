@@ -60,6 +60,7 @@ export default function OrderDetail({ order, items = [] }) {
                   <CreditCard size={15} /> Pembayaran
                 </div>
                 <div className="text-sm font-bold mt-2">Virtual Account</div>
+                <div className="text-xs text-[#2C1E16]/60 mt-1">{order.payment_bank_name || 'Bank'} · {order.payment_account_name || 'Company Payment Account'}</div>
                 <div className="text-xs text-[#2C1E16]/60 mt-1">VA: {order.va_number || 'Menunggu nomor VA admin'}</div>
                 <div className="text-[11px] uppercase mt-2 font-bold text-[#2C1E16]/50">Status pembayaran: {order.payment_status || 'unpaid'}</div>
               </div>
@@ -73,6 +74,7 @@ export default function OrderDetail({ order, items = [] }) {
                 </div>
               </div>
             )}
+            {order.payment_status === 'rejected' && <div className="mt-4 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</div>}
 
             <div className="mt-8">
               <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Produk</div>

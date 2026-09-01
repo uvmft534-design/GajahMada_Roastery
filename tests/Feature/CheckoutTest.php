@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PaymentSetting;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -105,6 +106,7 @@ class CheckoutTest extends TestCase
     private function checkout(array $overrides = [])
     {
         $user = User::factory()->create(['role' => 'customer']);
+        PaymentSetting::create(['bank_name' => 'BCA', 'account_name' => 'Kopi Gajahmada', 'account_number' => '111111', 'is_active' => true, 'created_by' => $user->id]);
         $product = Product::create([
             'product_name' => 'Gayo',
             'category' => 'Arabica',

@@ -14,7 +14,11 @@ class GoogleController extends Controller
 {
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->with([
+                'prompt' => 'select_account',
+            ])
+            ->redirect();
     }
 
     public function handleGoogleCallback(Request $request)
@@ -23,7 +27,9 @@ class GoogleController extends Controller
             $googleUser = Socialite::driver('google')->user();
 
             $user = app(GoogleAccountLinker::class)->link(
-                $googleUser->getEmail(), $googleUser->getId(), $googleUser->getName(),
+                $googleUser->getEmail(),
+                $googleUser->getId(),
+                $googleUser->getName(),
             );
 
             Auth::login($user);
@@ -31,9 +37,16 @@ class GoogleController extends Controller
 
             return app(RoleRedirector::class)->redirect($user);
         } catch (\Throwable $exception) {
-            Log::error('Google OAuth login failed.', ['exception' => $exception]);
+            Log::error('Google OAuth login failed.', [
+                'exception' => $exception,
+            ]);
 
-            return redirect()->route('login')->with('error', 'Login melalui Google gagal. Silakan coba lagi.');
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    'Login melalui Google gagal. Silakan coba lagi.'
+                );
         }
     }
 }
