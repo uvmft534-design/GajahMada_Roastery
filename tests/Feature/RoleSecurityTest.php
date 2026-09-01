@@ -36,12 +36,22 @@ class RoleSecurityTest extends TestCase
             $user = User::factory()->create(['role' => $role]);
 
             $this->actingAs($user)->get(route('super-admin.dashboard'))->assertForbidden();
+            $this->actingAs($user)->get(route('super-admin.payment-settings.index'))->assertForbidden();
             $this->actingAs($user)
                 ->patch(route('super-admin.users.role.update', $target), ['role' => 'admin'])
                 ->assertForbidden();
         }
 
         $this->assertDatabaseHas('users', ['id' => $target->id, 'role' => 'customer']);
+    }
+
+    public function test_super_admin_can_access_all_super_admin_pages(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'super_admin']);
+
+        $this->actingAs($superAdmin)->get(route('super-admin.dashboard'))->assertOk();
+        $this->actingAs($superAdmin)->get(route('super-admin.users.index'))->assertOk();
+        $this->actingAs($superAdmin)->get(route('super-admin.payment-settings.index'))->assertOk();
     }
 
     public function test_super_admin_can_change_customer_to_admin_and_creates_audit_log(): void
@@ -138,5 +148,23 @@ class RoleSecurityTest extends TestCase
         $this->actingAs($other)->get(route('orders.payment', $order))->assertForbidden();
         $this->actingAs($other)->post(route('orders.proof', $order), ['proof' => UploadedFile::fake()->image('proof.jpg')])->assertForbidden();
         $this->actingAs($other)->post(route('orders.complete', $order))->assertForbidden();
+    }
+
+    public function test_payment_proof_view_is_limited_to_owner_and_admin_roles(): void
+    {
+        Storage::fake('public');
+        $owner = User::factory()->create(['role' => 'customer']);
+        $other = User::factory()->create(['role' => 'customer']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $superAdmin = User::factory()->create(['role' => 'super_admin']);
+        $courier = User::factory()->create(['role' => 'courier']);
+        Storage::disk('public')->put('payment-proof/proof.jpg', 'proof');
+        $order = Order::factory()->create(['user_id' => $owner->id, 'payment_proof' => 'payment-proof/proof.jpg']);
+
+        $this->actingAs($owner)->get(route('orders.proof.view', $order))->assertOk();
+        $this->actingAs($admin)->get(route('orders.proof.view', $order))->assertOk();
+        $this->actingAs($superAdmin)->get(route('orders.proof.view', $order))->assertOk();
+        $this->actingAs($other)->get(route('orders.proof.view', $order))->assertForbidden();
+        $this->actingAs($courier)->get(route('orders.proof.view', $order))->assertForbidden();
     }
 }

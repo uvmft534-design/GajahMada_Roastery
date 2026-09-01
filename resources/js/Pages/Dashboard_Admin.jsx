@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
-import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon } from 'lucide-react';
+import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard } from 'lucide-react';
 
 export default function DashboardAdmin({ products = [], orders = [], analytics = {} }) {
   const { auth } = usePage().props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [selectedProof, setSelectedProof] = useState(null);
+  const filteredOrders = orderFilter === 'all' ? orders : orders.filter((order) => order.status === orderFilter);
 
   // Inertia Form Hook untuk kirim data & file gambar ke backend
   const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
@@ -85,9 +88,9 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
             <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/20">
               <Package size={18} /> Products (CRUD)
             </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-[#FDFBF7]/70 hover:text-white">
-              <Users size={18} /> Users & Roles
-            </a>
+            <Link href={route('admin.payment-settings.index')} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-[#FDFBF7]/70 hover:text-white">
+              <CreditCard size={18} /> Payment Settings
+            </Link>
           </nav>
         </div>
 
@@ -197,13 +200,10 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
           <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-[#2C1E16]/10">
             <div>
               <h3 className="font-bold text-lg">Daftar Pesanan Terbaru</h3>
-              <p className="text-xs text-[#2C1E16]/60">Semua order masuk, kirim, selesai, dan batal</p>
+              <p className="text-xs text-[#2C1E16]/60">Status fulfillment dan pembayaran pesanan terbaru</p>
             </div>
-            <div className="flex gap-2 text-xs font-bold">
-              <button className="px-3 py-2 rounded-xl border border-[#2C1E16]/10 bg-[#FDFBF7]">Semua</button>
-              <button className="px-3 py-2 rounded-xl border border-[#2C1E16]/10">Perlu Dikirim</button>
-              <button className="px-3 py-2 rounded-xl border border-[#2C1E16]/10">Selesai</button>
-              <button className="px-3 py-2 rounded-xl border border-[#2C1E16]/10">Dibatalkan</button>
+            <div className="flex flex-wrap gap-2 text-xs font-bold">
+              {[['all', 'Semua'], ['awaiting_payment', 'Menunggu Pembayaran'], ['processing', 'Diproses'], ['packed', 'Sudah Dikemas'], ['cancelled', 'Dibatalkan']].map(([value, label]) => <button key={value} onClick={() => setOrderFilter(value)} className={`px-3 py-2 rounded-xl border border-[#2C1E16]/10 ${orderFilter === value ? 'bg-[#FDFBF7]' : ''}`}>{label}</button>)}
             </div>
           </div>
 
@@ -220,12 +220,12 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2C1E16]/5">
-                {orders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="p-8 text-center text-sm text-[#2C1E16]/50">Belum ada pesanan masuk.</td>
                   </tr>
                 ) : (
-                  orders.map((order) => (
+                  filteredOrders.map((order) => (
                     <tr key={order.order_id} className="hover:bg-[#FDFBF7]/60 transition-colors">
                       <td className="p-4 pl-6 sm:pl-8">
                         <div className="font-bold">{order.order_number}</div>
@@ -236,16 +236,16 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                       <td className="p-4 font-bold">Rp {Number(order.total_amount || 0).toLocaleString('id-ID')}</td>
                       <td className="p-4">
                         <span className="rounded-full bg-[#D4813E]/10 px-3 py-1 text-[11px] font-bold text-[#D4813E] uppercase">{order.status}</span>
+                        <div className="mt-1 text-[10px] font-bold uppercase text-[#2C1E16]/50">Payment: {order.payment_status}</div>
+                        <div className="text-[10px] text-[#2C1E16]/50">{order.payment_bank_name || '-'} · {order.va_number || '-'}</div>
                       </td>
                       <td className="p-4 pr-6 sm:pr-8 text-right">
-                        <select className="border border-[#2C1E16]/10 rounded-xl px-3 py-2 text-xs" defaultValue={order.status} onChange={(e) => {
-                          router.post(route('admin.orders.status', order.order_id), { status: e.target.value }, { preserveScroll: true });
-                        }}>
-                          <option value="pending">Pending</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                        {order.payment_status === 'pending_confirmation' && order.payment_proof && <button onClick={() => setSelectedProof({ url: route('orders.proof.view', order.order_id), order })} className="mr-2 rounded-xl border border-[#2C1E16]/10 px-3 py-2 text-xs font-bold">Lihat Bukti Pembayaran</button>}
+                        {order.status === 'awaiting_payment' && order.payment_status === 'pending_confirmation' && <span className="inline-flex gap-2"><button onClick={() => { const reviewNote = window.prompt('Alasan penolakan pembayaran'); if (reviewNote) router.post(route('admin.orders.rejectPayment', order.order_id), { review_note: reviewNote }, { preserveScroll: true }); }} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600">Reject Payment</button><button onClick={() => router.post(route('admin.orders.approvePayment', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Confirm Payment</button></span>}
+                        {order.status === 'awaiting_payment' && order.payment_status === 'paid' && <button onClick={() => router.post(route('admin.orders.process', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Proses Pesanan</button>}
+                        {order.status === 'processing' && <button onClick={() => router.post(route('admin.orders.packed', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Tandai Sudah Dikemas</button>}
+                        {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('admin.orders.cancel', order.order_id), {}, { preserveScroll: true })} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600">Batalkan</button>}
+                        {order.status === 'packed' && <span className="text-xs font-bold text-[#D4813E]">Siap Pickup</span>}
                       </td>
                     </tr>
                   ))
@@ -254,6 +254,8 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
             </table>
           </div>
         </section>
+
+        {selectedProof && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-xl"><div className="flex items-center justify-between gap-4"><div><p className="font-bold">Bukti Pembayaran</p><p className="text-xs text-[#2C1E16]/60">{selectedProof.order.order_number}</p></div><button onClick={() => setSelectedProof(null)} className="rounded-xl border px-3 py-2 text-xs font-bold">Tutup</button></div><div className="mt-5 max-h-[70vh] overflow-auto rounded-2xl bg-[#FDFBF7] p-3"><img src={selectedProof.url} alt="Bukti pembayaran" className="max-h-[65vh] w-full object-contain" /><a href={selectedProof.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-[#D4813E]">Buka Bukti</a></div></div></div>}
 
         {/* Table */}
         <div className="bg-white rounded-3xl border border-[#2C1E16]/10 shadow-sm overflow-hidden mt-8">

@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Services\OrderFulfillmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -76,7 +77,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => $user?->id,
                 'order_number' => 'ROAST-'.strtoupper(Str::random(8)),
-                'status' => 'pending',
+                'status' => 'awaiting_payment',
                 'shipping_method' => $validated['shipping_method'],
                 'payment_method' => 'virtual_account',
                 'payment_status' => 'unpaid',
@@ -121,6 +122,14 @@ class OrderController extends Controller
         ]);
     }
 
+    public function viewPaymentProof(Order $order)
+    {
+        $this->authorize('view', $order);
+        abort_unless($order->payment_proof && Storage::disk('public')->exists($order->payment_proof), 404);
+
+        return Storage::disk('public')->response($order->payment_proof);
+    }
+
     public function show(Order $order)
     {
         $this->authorize('view', $order);
@@ -160,13 +169,13 @@ class OrderController extends Controller
 
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->toDateString();
-            $revenue = Order::whereDate('created_at', $date)->sum('total_amount');
+            $revenue = Order::whereDate('created_at', $date)->where('payment_status', 'paid')->where('status', '!=', 'cancelled')->sum('total_amount');
             $chartData[] = (int) $revenue;
             $chartLabels[] = now()->subDays($i)->format('d M');
         }
 
         $analytics = [
-            'monthlyRevenue' => Order::whereMonth('created_at', now()->month)->sum('total_amount'),
+            'monthlyRevenue' => Order::whereMonth('created_at', now()->month)->where('payment_status', 'paid')->where('status', '!=', 'cancelled')->sum('total_amount'),
             'monthlyOrderCount' => Order::whereMonth('created_at', now()->month)->count(),
             'transactions' => Order::count(),
             'avgTransaction' => Order::avg('total_amount') ?: 0,
@@ -181,17 +190,26 @@ class OrderController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Order $order)
+    public function processOrder(Order $order, OrderFulfillmentService $fulfillment)
     {
-        $request->validate([
-            'status' => 'required|in:pending,shipped,completed,cancelled',
-        ]);
+        $fulfillment->process($order);
 
-        $order->update([
-            'status' => $request->status,
-        ]);
+        return back()->with('success', 'Pesanan sedang diproses.');
+    }
 
-        return redirect()->back()->with('success', 'Status pesanan berhasil diperbarui.');
+    public function markPacked(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $fulfillment->pack($order);
+
+        return back()->with('success', 'Pesanan siap untuk tahap pickup.');
+    }
+
+    public function cancel(Order $order, OrderFulfillmentService $fulfillment)
+    {
+        $this->authorize('update', $order);
+        $fulfillment->cancel($order);
+
+        return back()->with('success', 'Pesanan dibatalkan.');
     }
 
     public function uploadProof(Request $request, Order $order)
@@ -248,11 +266,6 @@ class OrderController extends Controller
     public function complete(Order $order)
     {
         $this->authorize('update', $order);
-
-        $order->update([
-            'status' => 'completed',
-        ]);
-
-        return redirect()->back()->with('success', 'Pesanan telah dikonfirmasi selesai.');
+        abort(422, 'Status selesai belum tersedia pada flow fulfillment saat ini.');
     }
 }

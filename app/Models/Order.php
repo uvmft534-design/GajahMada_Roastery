@@ -35,6 +35,7 @@ class Order extends Model
         'delivery_fee',
         'total_amount',
         'tracking_number',
+        'stock_released_at',
     ];
 
     public function user(): BelongsTo
@@ -50,5 +51,10 @@ class Order extends Model
     public function paymentReviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'payment_reviewed_by');
+    }
+
+    protected function casts(): array
+    {
+        return ['stock_released_at' => 'datetime', 'payment_reviewed_at' => 'datetime'];
     }
 }

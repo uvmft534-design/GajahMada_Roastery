@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, UploadCloud, CheckCircle2 } from 'lucide-react';
 
 export default function OrderDetail({ order, items = [] }) {
+  const statusLabel = { awaiting_payment: 'Menunggu Pembayaran', processing: 'Sedang Diproses', packed: 'Sudah Dikemas', cancelled: 'Dibatalkan', shipped: 'Dikirim', completed: 'Selesai' }[order.status] || order.status;
   const money = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -43,7 +44,7 @@ export default function OrderDetail({ order, items = [] }) {
                 <div className="text-2xl font-bold mt-2">{order.order_number}</div>
               </div>
               <span className="px-4 py-2 rounded-full bg-[#D4813E]/10 text-[#D4813E] font-bold text-xs uppercase">
-                {order.status}
+                {statusLabel}
               </span>
             </div>
 
@@ -75,6 +76,7 @@ export default function OrderDetail({ order, items = [] }) {
               </div>
             )}
             {order.payment_status === 'rejected' && <div className="mt-4 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</div>}
+            {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('orders.cancel', order.order_id))} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600">Batalkan Pesanan</button>}
 
             <div className="mt-8">
               <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Produk</div>

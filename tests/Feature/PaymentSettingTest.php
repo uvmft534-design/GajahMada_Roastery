@@ -49,9 +49,9 @@ class PaymentSettingTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'customer']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $order = Order::factory()->create(['user_id' => $customer->id, 'payment_status' => 'pending_confirmation', 'status' => 'pending']);
+        $order = Order::factory()->create(['user_id' => $customer->id, 'payment_status' => 'pending_confirmation', 'status' => 'awaiting_payment']);
         $this->actingAs($admin)->post(route('admin.orders.approvePayment', $order))->assertRedirect();
-        $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'payment_status' => 'paid', 'payment_reviewed_by' => $admin->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'payment_status' => 'paid', 'payment_reviewed_by' => $admin->id, 'status' => 'awaiting_payment']);
         $this->actingAs($admin)->post(route('admin.orders.rejectPayment', $order), ['review_note' => 'Tidak valid'])->assertStatus(422);
     }
 

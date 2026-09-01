@@ -157,6 +157,7 @@ export default function App({ products = [] }) {
                       </div>
 
                       <div className="py-1">
+                        {auth.user.role === 'customer' && <Link href={route('orders.history')} className="flex items-center gap-3 px-4 py-2 text-xs font-medium text-[#2C1E16]/80 hover:bg-[#D4813E]/10 hover:text-[#D4813E] transition-colors" onClick={() => setIsDropdownOpen(false)}><ShoppingBag size={15} /> Pesanan Saya</Link>}
                         <Link
                           href={route('profile.edit')}
                           className="flex items-center gap-3 px-4 py-2 text-xs font-medium text-[#2C1E16]/80 hover:bg-[#D4813E]/10 hover:text-[#D4813E] transition-colors"
