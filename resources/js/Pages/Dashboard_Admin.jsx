@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
-import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard } from 'lucide-react';
+import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard, FileText } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
 export default function DashboardAdmin({ products = [], orders = [], analytics = {}, couriers = [] }) {
@@ -92,6 +92,9 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
             </a>
             <Link href={route('admin.payment-settings.index')} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-[#FDFBF7]/70 hover:text-white">
               <CreditCard size={18} /> Payment Settings
+            </Link>
+            <Link href={route('admin.reports.index')} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-[#FDFBF7]/70 hover:text-white">
+              <FileText size={18} /> Laporan
             </Link>
           </nav>
         </div>

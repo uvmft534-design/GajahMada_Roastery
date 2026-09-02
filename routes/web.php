@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\PaymentSettingController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdminReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -59,6 +61,16 @@ Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(functio
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->get('/admin/payment-settings', [PaymentSettingController::class, 'index'])->name('admin.payment-settings.index');
 Route::middleware(['auth', 'verified', 'role:admin'])->post('/admin/payment-settings/requests', [PaymentSettingController::class, 'requestChange'])->name('admin.payment-settings.requests.store');
 
+Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/create', [ReportController::class, 'create'])->name('create');
+    Route::post('/', [ReportController::class, 'store'])->name('store');
+    Route::post('/preview', [ReportController::class, 'preview'])->name('preview');
+    Route::get('/{report}', [ReportController::class, 'show'])->name('show');
+    Route::put('/{report}', [ReportController::class, 'update'])->name('update');
+    Route::post('/{report}/submit', [ReportController::class, 'submit'])->name('submit');
+});
+
 Route::middleware(['auth', 'verified', 'role:courier'])->group(function () {
     Route::get('/courier/dashboard', [OrderController::class, 'courierDashboard'])->name('courier.dashboard');
     Route::post('/courier/orders/{order}/confirm-pickup', [OrderController::class, 'confirmPickup'])->name('courier.orders.confirm-pickup');
@@ -75,4 +87,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin
     Route::get('/payment-settings', [SuperAdminController::class, 'paymentSettings'])->name('payment-settings.index');
     Route::post('/payment-settings', [SuperAdminController::class, 'createInitialPaymentSetting'])->name('payment-settings.store');
     Route::post('/payment-settings/requests/{paymentSettingChangeRequest}/review', [SuperAdminController::class, 'reviewPaymentSettingChange'])->name('payment-settings.requests.review');
+    Route::get('/reports', [SuperAdminReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/{report}', [SuperAdminReportController::class, 'show'])->name('reports.show');
+    Route::post('/reports/{report}/review', [SuperAdminReportController::class, 'review'])->name('reports.review');
 });
