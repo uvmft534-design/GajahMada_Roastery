@@ -71,9 +71,12 @@ class SuperAdminController extends Controller
 
     public function createInitialPaymentSetting(Request $request): RedirectResponse
     {
-        abort_if(PaymentSetting::where('is_active', true)->exists(), 422, 'Payment Account aktif sudah tersedia.');
         $data = $request->validate(['bank_name' => 'required|string|max:100', 'account_name' => 'required|string|max:255', 'account_number' => 'required|string|max:100']);
-        PaymentSetting::create($data + ['is_active' => true, 'created_by' => $request->user()->id]);
+        DB::transaction(function () use ($data, $request): void {
+            // Lock the setting set before testing so two initial requests cannot both activate one.
+            abort_if(PaymentSetting::lockForUpdate()->where('is_active', true)->exists(), 422, 'Payment Account aktif sudah tersedia.');
+            PaymentSetting::create($data + ['is_active' => true, 'created_by' => $request->user()->id]);
+        });
 
         return back()->with('success', 'Payment Account berhasil diaktifkan.');
     }

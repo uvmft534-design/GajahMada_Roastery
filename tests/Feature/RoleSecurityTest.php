@@ -138,7 +138,7 @@ class RoleSecurityTest extends TestCase
 
     public function test_customer_cannot_access_another_users_order_endpoints(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $owner = User::factory()->create(['role' => 'customer']);
         $other = User::factory()->create(['role' => 'customer']);
         $order = Order::factory()->create(['user_id' => $owner->id]);
@@ -152,13 +152,13 @@ class RoleSecurityTest extends TestCase
 
     public function test_payment_proof_view_is_limited_to_owner_and_admin_roles(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $owner = User::factory()->create(['role' => 'customer']);
         $other = User::factory()->create(['role' => 'customer']);
         $admin = User::factory()->create(['role' => 'admin']);
         $superAdmin = User::factory()->create(['role' => 'super_admin']);
         $courier = User::factory()->create(['role' => 'courier']);
-        Storage::disk('public')->put('payment-proof/proof.jpg', 'proof');
+        Storage::disk('local')->put('payment-proof/proof.jpg', 'proof');
         $order = Order::factory()->create(['user_id' => $owner->id, 'payment_proof' => 'payment-proof/proof.jpg']);
 
         $this->actingAs($owner)->get(route('orders.proof.view', $order))->assertOk();

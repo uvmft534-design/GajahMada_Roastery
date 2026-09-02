@@ -126,9 +126,10 @@ class OrderController extends Controller
     public function viewPaymentProof(Order $order)
     {
         $this->authorize('view', $order);
-        abort_unless($order->payment_proof && Storage::disk('public')->exists($order->payment_proof), 404);
+        $disk = $this->paymentProofDisk($order->payment_proof);
+        abort_unless($order->payment_proof && $disk->exists($order->payment_proof), 404);
 
-        return Storage::disk('public')->response($order->payment_proof);
+        return $disk->response($order->payment_proof);
     }
 
     public function show(Order $order)
@@ -292,10 +293,11 @@ class OrderController extends Controller
 
         if ($request->hasFile('proof')) {
             if ($order->payment_proof) {
-                Storage::disk('public')->delete($order->payment_proof);
+                $this->paymentProofDisk($order->payment_proof)->delete($order->payment_proof);
             }
 
-            $path = $request->file('proof')->store('payment-proof', 'public');
+            // Payment proof is private: it is served only through the authorized endpoint.
+            $path = $request->file('proof')->store('payment-proof', 'local');
             $order->update([
                 'payment_proof' => $path,
                 'payment_status' => 'pending_confirmation',
@@ -337,5 +339,11 @@ class OrderController extends Controller
         $fulfillment->complete($order);
 
         return back()->with('success', 'Pesanan selesai.');
+    }
+
+    private function paymentProofDisk(?string $path)
+    {
+        // Keep already-uploaded legacy files viewable through the same authorized endpoint.
+        return $path && Storage::disk('local')->exists($path) ? Storage::disk('local') : Storage::disk('public');
     }
 }
