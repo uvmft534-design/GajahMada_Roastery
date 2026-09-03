@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 
-export default function DeleteUserForm({ className = '' }) {
+export default function DeleteUserForm({ className = '', googleLinked = false }) {
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
     const passwordInput = useRef();
 
@@ -50,6 +50,7 @@ export default function DeleteUserForm({ className = '' }) {
             <header>
                 <h2 className="text-lg font-bold text-[#2C1E16]">Hapus akun</h2>
                 <p className="mt-1 text-sm leading-relaxed text-[#2C1E16]/60">Menghapus akun akan menghapus data secara permanen. Simpan informasi yang masih Anda perlukan sebelum melanjutkan.</p>
+                {googleLinked && <p className="mt-2 text-sm leading-relaxed text-[#2C1E16]/60">Untuk keamanan, penghapusan akun tetap memerlukan kata sandi. Jika Anda belum pernah membuatnya, kirim tautan atur kata sandi melalui email terlebih dahulu.</p>}
             </header>
 
             <DangerButton className="rounded-full normal-case tracking-normal" onClick={confirmUserDeletion}>

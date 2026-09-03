@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,6 +21,7 @@ class ProfileController extends Controller
     {
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'googleLinked' => filled($request->user()->google_id),
             'status' => session('status'),
         ]);
     }
@@ -59,5 +61,23 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    /**
+     * Send a local-password setup link to the authenticated user's own email.
+     */
+    public function sendPasswordSetupLink(Request $request): RedirectResponse
+    {
+        $status = Password::sendResetLink([
+            'email' => $request->user()->email,
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return Redirect::route('profile.edit')->with('status', 'password-setup-link-sent');
+        }
+
+        return Redirect::route('profile.edit')->withErrors([
+            'password_setup' => [trans($status)],
+        ]);
     }
 }
