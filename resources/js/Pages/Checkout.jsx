@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, ShoppingBag, User, ArrowLeft, Plus, Minus, 
-  Trash2, Building2, CheckCircle2, Star,
-  Menu, X
-} from 'lucide-react';
+import { ShoppingBag, ArrowLeft, Plus, Minus, Trash2, Building2, CheckCircle2, Star } from 'lucide-react';
 import { Link, usePage, useForm } from '@inertiajs/react';
-
-const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
-
-// Data keranjang diisi dari props Inertia
-const INITIAL_CART = []; // empty placeholder, real data created from product props in component
 
 // Animasi dasar
 const fadeInUp = {
@@ -44,8 +35,6 @@ export default function App() {
     customer_note: '',
   });
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState(() => {
     if (!product) return [];
     return [{
@@ -101,12 +90,7 @@ export default function App() {
       return;
     }
 
-    post(route('orders.store'), {
-      preserveScroll: true,
-      onSuccess: () => {
-        setIsCartOpen(false);
-      },
-    });
+    post(route('orders.store'), { preserveScroll: true });
   };
 
   return (
@@ -119,98 +103,26 @@ export default function App() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="fixed top-0 w-full bg-[#FDFBF7]/90 backdrop-blur-md z-50 border-b border-[#2C1E16]/10"
       >
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center">
+          <Link href={route('home')} className="flex items-center gap-3 group" aria-label="Kembali ke beranda Kopi Gajahmada">
             <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-[#2C1E16]/20 group-hover:border-[#D4813E] transition-colors">
                 <img src="/images/logo.png" alt="Logo Kopi Gajahmada" className="w-full h-full object-cover" />
             </div>
             <span className="font-bold text-xl tracking-tight hidden sm:block group-hover:text-[#D4813E] transition-colors">Kopi Gajahmada</span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8 font-medium text-sm tracking-wide">
-            {NAV_LINKS.map((link) => {
-              const href = link === 'Beranda' ? route('home') : `${route('home')}#${link.toLowerCase()}`;
-              return (
-                <Link key={link} href={href} className="hover:text-[#D4813E] transition-colors relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-0 after:h-[2px] after:bg-[#D4813E] hover:after:w-full after:transition-all after:duration-300">
-                  {link}
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-5">
-            <button className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
-            <Link href={auth && auth.user ? route('profile.edit') : route('login')} className="hover:text-[#D4813E] transition-transform hover:scale-110">
-              <User size={20} />
-            </Link>
-            <div className="relative">
-              <button
-                onClick={() => setIsCartOpen((prev) => !prev)}
-                className="hover:text-[#D4813E] transition-transform hover:scale-110 relative text-[#D4813E]"
-              >
-                <ShoppingBag size={20} />
-                {cartQty > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-[#D4813E] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                    {cartQty}
-                  </span>
-                )}
-              </button>
-
-              {isCartOpen && cartItems.length > 0 && (
-                <div className="absolute right-0 mt-3 w-72 bg-white border border-[#2C1E16]/10 rounded-3xl shadow-xl shadow-[#2C1E16]/10 z-50">
-                  <div className="px-4 py-4 border-b border-[#2C1E16]/10 font-semibold text-sm">Isi Keranjang</div>
-                  <div className="max-h-64 overflow-y-auto p-4 space-y-3">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="flex items-center gap-3">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 rounded-2xl object-cover border border-[#2C1E16]/10" />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold truncate">{item.name}</div>
-                          <div className="text-[11px] text-[#2C1E16]/60">x{item.qty} • {formatIDR(item.price)}</div>
-                        </div>
-                        <button type="button" onClick={() => handleRemoveItem(item.id)} aria-label={`Hapus ${item.name} dari keranjang`} className="rounded-full p-2 text-[#2C1E16]/40 hover:bg-red-50 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <button className="md:hidden ml-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+          </Link>
         </div>
       </motion.nav>
-
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#FDFBF7] border-b border-[#2C1E16]/10 overflow-hidden"
-          >
-            <div className="px-6 py-4 flex flex-col gap-4">
-              {NAV_LINKS.map((link) => {
-                const href = link === 'Beranda' ? route('home') : `${route('home')}#${link.toLowerCase()}`;
-                return (
-                  <Link key={link} href={href} className="text-lg font-medium">
-                    {link}
-                  </Link>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* HEADER PAGE */}
       <div className="pt-32 pb-8 max-w-7xl mx-auto px-6">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 text-sm text-[#2C1E16]/50 mb-6 w-fit cursor-pointer hover:text-[#D4813E] transition-colors group"
+          className="mb-6 w-fit"
         >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Shop
+          <Link href={route('home')} className="flex items-center gap-2 text-sm text-[#2C1E16]/50 hover:text-[#D4813E] transition-colors group">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Kembali Belanja
+          </Link>
         </motion.div>
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
