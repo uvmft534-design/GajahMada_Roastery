@@ -171,17 +171,13 @@ class OrderController extends Controller
         $dashboardRevenueAnalytics['top_products'] = $revenueAnalytics->topProducts();
         $dashboardRevenueAnalytics['frequent_customers'] = $revenueAnalytics->frequentCustomers();
         $revenueTrend = $dashboardRevenueAnalytics['trend'];
+        $monthlyKpis = $revenueAnalytics->currentMonthKpis();
 
         $analytics = [
-            'monthlyRevenue' => (int) Order::revenueValid()->whereMonth('created_at', now()->month)->sum('total_amount'),
-            'monthlyOrderCount' => Order::whereMonth('created_at', now()->month)->count(),
-            'transactions' => Order::count(),
-            'avgTransaction' => (function () {
-                $valid = Order::revenueValid();
-                $count = (clone $valid)->count();
-
-                return $count ? (int) round((clone $valid)->sum('total_amount') / $count) : 0;
-            })(),
+            'monthlyRevenue' => $monthlyKpis['revenue'],
+            'monthlyOrderCount' => $monthlyKpis['valid_order_count'],
+            'transactions' => $monthlyKpis['valid_order_count'],
+            'avgTransaction' => $monthlyKpis['average_order_value'],
             'chartData' => collect($revenueTrend)->pluck('revenue')->all(),
             'chartLabels' => collect($revenueTrend)->pluck('label')->all(),
         ];

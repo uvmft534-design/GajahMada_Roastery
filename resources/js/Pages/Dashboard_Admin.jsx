@@ -134,7 +134,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Pendapatan Bulan Ini</p>
+              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Pendapatan Valid Bulan Ini</p>
               <h3 className="text-2xl font-bold mt-1">Rp {Number(analytics.monthlyRevenue || 0).toLocaleString('id-ID')}</h3>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
               <Package size={24} />
             </div>
             <div>
-              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Pesanan Baru Bulan Ini</p>
+              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Pesanan Valid Bulan Ini</p>
               <h3 className="text-2xl font-bold mt-1">{analytics.monthlyOrderCount || 0}</h3>
             </div>
           </div>
@@ -154,8 +154,8 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
               <Users size={24} />
             </div>
             <div>
-              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Total Transaksi</p>
-              <h3 className="text-2xl font-bold mt-1">{analytics.transactions || orders.length || 0}</h3>
+              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Transaksi Valid Bulan Ini</p>
+              <h3 className="text-2xl font-bold mt-1">{analytics.transactions ?? 0}</h3>
             </div>
           </div>
 
@@ -164,7 +164,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Rata-Rata Transaksi</p>
+              <p className="text-xs text-[#2C1E16]/60 uppercase font-bold tracking-wider">Rata-Rata Transaksi Bulan Ini</p>
               <h3 className="text-2xl font-bold mt-1">Rp {Number(analytics.avgTransaction || 0).toLocaleString('id-ID')}</h3>
             </div>
           </div>

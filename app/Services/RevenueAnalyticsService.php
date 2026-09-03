@@ -10,6 +10,32 @@ use Illuminate\Support\Collection;
 class RevenueAnalyticsService
 {
     /**
+     * Calculate the revenue-valid KPI set for the current calendar month in
+     * the analytics timezone.
+     *
+     * @return array{revenue: int, valid_order_count: int, average_order_value: int}
+     */
+    public function currentMonthKpis(): array
+    {
+        $timezone = config('analytics.timezone');
+        $start = now($timezone)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+        $totals = Order::revenueValid()
+            ->whereBetween('created_at', [$start->copy()->utc(), $end->copy()->utc()])
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as revenue, COUNT(*) as valid_order_count')
+            ->first();
+
+        $revenue = (int) $totals->revenue;
+        $validOrderCount = (int) $totals->valid_order_count;
+
+        return [
+            'revenue' => $revenue,
+            'valid_order_count' => $validOrderCount,
+            'average_order_value' => $validOrderCount === 0 ? 0 : (int) round($revenue / $validOrderCount),
+        ];
+    }
+
+    /**
      * Build the seven most recent calendar days of revenue in the analytics timezone.
      *
      * @return array<int, array{date: string, label: string, revenue: int, valid_order_count: int, daily_aov: int}>
