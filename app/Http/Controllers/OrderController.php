@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
@@ -20,23 +21,27 @@ use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    public function checkout(Request $request, $product_id)
+    public function checkout(Request $request)
     {
-        $product = Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->where('product_id', $product_id)->first();
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*' => 'integer|distinct',
+        ]);
 
-        if (! $product) {
-            abort(404, 'Produk tidak ditemukan.');
-        }
+        $items = CartItem::query()
+            ->with('product')
+            ->whereIn('id', $validated['items'])
+            ->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))
+            ->get();
 
-        if (! Auth::check()) {
-            return redirect()->route('login');
+        if ($items->count() !== count($validated['items'])) {
+            abort(403);
         }
 
         return Inertia::render('Checkout', [
-            'product' => $product,
-            'qty' => (int) $request->query('qty', 1),
+            'items' => $items,
             'auth' => [
-                'user' => Auth::user(),
+                'user' => $request->user(),
             ],
         ]);
     }
@@ -44,9 +49,8 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,product_id',
-            'qty' => 'required|integer|min:1',
-            'brew_method' => 'required|in:espresso,filter',
+            'cart_item_ids' => 'required|array|min:1',
+            'cart_item_ids.*' => 'integer|distinct',
             'shipping_method' => 'required|in:instant,regular',
             'payment_method' => 'required|in:virtual_account',
             'customer_name' => 'required|string|max:255',
@@ -60,20 +64,44 @@ class OrderController extends Controller
             return back()->withErrors(['payment_method' => 'Metode pembayaran sedang belum tersedia. Silakan coba kembali nanti.']);
         }
 
-        $order = DB::transaction(function () use ($validated, $paymentSetting) {
-            // Lock row produk agar checkout bersamaan tidak dapat menjual stok yang sama.
-            $product = Product::where('product_id', $validated['product_id'])
+        $order = DB::transaction(function () use ($request, $validated, $paymentSetting) {
+            $cartItems = CartItem::query()
+                ->whereIn('id', $validated['cart_item_ids'])
+                ->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))
+                ->orderBy('product_id')
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->get();
 
-            if ($validated['qty'] > $product->stock) {
+            if ($cartItems->count() !== count($validated['cart_item_ids'])) {
                 throw ValidationException::withMessages([
-                    'qty' => "Jumlah pesanan melebihi stok yang tersedia ({$product->stock} pcs).",
+                    'cart_item_ids' => 'Item keranjang tidak valid.',
                 ]);
             }
 
-            $user = Auth::user();
-            $subtotal = (int) ($product->price * $validated['qty']);
+            // Lock every product in a stable order before checking stock or creating the order.
+            $products = Product::query()
+                ->whereIn('product_id', $cartItems->pluck('product_id')->unique())
+                ->orderBy('product_id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
+            $subtotal = 0;
+            foreach ($cartItems as $cartItem) {
+                $product = $products->get($cartItem->product_id);
+
+                if (! $product || $cartItem->qty > $product->stock) {
+                    $productName = $product?->product_name ?? 'produk';
+
+                    throw ValidationException::withMessages([
+                        'cart_item_ids' => "Stok {$productName} tidak mencukupi.",
+                    ]);
+                }
+
+                $subtotal += (int) $product->price * $cartItem->qty;
+            }
+
+            $user = $request->user();
             $deliveryFee = $validated['shipping_method'] === 'instant' ? 30000 : 25000;
             $total = $subtotal + $deliveryFee;
 
@@ -97,18 +125,25 @@ class OrderController extends Controller
                 'tracking_number' => null,
             ]);
 
-            OrderItem::create([
-                'order_id' => $order->order_id,
-                'product_id' => $product->product_id,
-                'product_name' => $product->product_name,
-                'product_category' => $product->category,
-                'qty' => $validated['qty'],
-                'unit_price' => (int) $product->price,
-                'subtotal' => $subtotal,
-                'brew_method' => $validated['brew_method'],
-            ]);
+            foreach ($cartItems as $cartItem) {
+                $product = $products->get($cartItem->product_id);
+                $itemSubtotal = (int) $product->price * $cartItem->qty;
 
-            $product->decrement('stock', $validated['qty']);
+                OrderItem::create([
+                    'order_id' => $order->order_id,
+                    'product_id' => $product->product_id,
+                    'product_name' => $product->product_name,
+                    'product_category' => $product->category,
+                    'qty' => $cartItem->qty,
+                    'unit_price' => (int) $product->price,
+                    'subtotal' => $itemSubtotal,
+                    'brew_method' => $cartItem->brew_method,
+                ]);
+
+                $product->decrement('stock', $cartItem->qty);
+            }
+
+            CartItem::query()->whereIn('id', $cartItems->pluck('id'))->delete();
 
             return $order;
         });

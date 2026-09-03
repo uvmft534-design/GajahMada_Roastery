@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Star, Heart, 
   Minus, Plus, Store, CheckCircle2, ChevronLeft, ExternalLink 
 } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -20,7 +20,7 @@ const staggerContainer = {
 };
 
 export default function Show() {
-  const { product } = usePage().props;
+  const { product, auth } = usePage().props;
 
   if (!product) {
     return (
@@ -36,56 +36,24 @@ export default function Show() {
 
   const [qty, setQty] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
-  
-  const [flyingItems, setFlyingItems] = useState([]);
-  const cartIconRef = useRef(null);
 
   const handleQtyChange = (type) => {
     if (type === 'min' && qty > 1) setQty(qty - 1);
     if (type === 'plus' && qty < (product.stock || 99)) setQty(qty + 1);
   };
 
-  const handleAddToCart = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const startX = rect.left + rect.width / 2;
-    const startY = rect.top + rect.height / 2;
-
-    let endX = window.innerWidth - 80;
-    let endY = 40;
-    
-    if (cartIconRef.current) {
-      const cartRect = cartIconRef.current.getBoundingClientRect();
-      endX = cartRect.left + cartRect.width / 2;
-      endY = cartRect.top + cartRect.height / 2;
+  const handleAddToCart = () => {
+    if (!auth?.user) {
+      window.location.href = route('login');
+      return;
     }
 
-    const newItem = { id: Date.now(), startX, startY, endX, endY };
-    setFlyingItems([...flyingItems, newItem]);
-
-    setTimeout(() => {
-      setFlyingItems((prev) => prev.filter(item => item.id !== newItem.id));
-      setCartCount(prev => prev + qty);
-      setQty(1);
-    }, 800);
+    router.post(route('cart.store', product.product_id), { qty });
   };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16] font-sans overflow-x-hidden pb-24">
       
-      <AnimatePresence>
-        {flyingItems.map(item => (
-          <motion.div
-            key={item.id}
-            initial={{ x: item.startX, y: item.startY, scale: 1, opacity: 1 }}
-            animate={{ x: item.endX, y: item.endY, scale: 0.2, opacity: 0.5 }}
-            transition={{ duration: 0.8, ease: [0.25, 0.8, 0.25, 1] }}
-            className="fixed z-[100] w-6 h-6 bg-[#D4813E] rounded-full pointer-events-none shadow-lg shadow-[#D4813E]/50"
-            style={{ left: -12, top: -12 }}
-          />
-        ))}
-      </AnimatePresence>
-
       <nav className="fixed top-0 w-full bg-[#FDFBF7]/90 backdrop-blur-md z-50 border-b border-[#2C1E16]/10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
@@ -97,16 +65,11 @@ export default function Show() {
               <ChevronLeft size={18} /> Kembali
             </Link>
             
-            <motion.div ref={cartIconRef} className="relative">
+            <Link href={auth?.user ? route('cart.index') : route('login')} className="relative">
               <div className="w-10 h-10 rounded-full bg-white border border-[#2C1E16]/15 flex items-center justify-center shadow-sm">
                 <ShoppingBag size={20} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#D4813E] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    {cartCount}
-                  </span>
-                )}
               </div>
-            </motion.div>
+            </Link>
           </div>
         </div>
       </nav>
@@ -205,13 +168,9 @@ export default function Show() {
                 </motion.button>
               </div>
 
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = `/checkout/${product.product_id}?qty=${qty}`}
-                className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/30 hover:bg-[#b86b30] transition-colors"
-              >
-                Checkout Sekarang
-              </motion.button>
+              <Link href={auth?.user ? route('cart.index') : route('login')} className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/30 hover:bg-[#b86b30] transition-colors grid place-items-center">
+                Lihat Keranjang
+              </Link>
             </motion.div>
 
             <motion.div variants={fadeInUp}>

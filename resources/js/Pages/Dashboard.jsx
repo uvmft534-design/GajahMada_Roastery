@@ -108,7 +108,7 @@ export default function Dashboard() {
             <button onClick={() => setIsSearchOpen((open) => !open)} aria-label="Cari produk" aria-expanded={isSearchOpen} className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
             
             <Link
-              href={auth && auth.user ? (products && products.length ? route('checkout', products[0].product_id) : route('home')) : route('login')}
+              href={auth && auth.user ? route('cart.index') : route('login')}
               aria-label="Keranjang belanja"
               className="hover:text-[#D4813E] transition-transform hover:scale-110"
             >
@@ -393,7 +393,9 @@ export default function Dashboard() {
                     </div>
                     
                     <Link
-                      href={auth && auth.user ? route('checkout', product.product_id) : route('login')}
+                      href={auth && auth.user ? route('cart.store', product.product_id) : route('login')}
+                      method={auth && auth.user ? 'post' : 'get'}
+                      as="button"
                       aria-label={`Tambah ${product.product_name} ke keranjang`}
                       className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white group-hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/25"
                     >

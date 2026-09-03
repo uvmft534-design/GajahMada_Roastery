@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentSettingController;
@@ -24,6 +25,11 @@ require __DIR__.'/auth.php';
 Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/products/{product}', [CartController::class, 'store'])->name('cart.store');
+    Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->name('cart.items.update');
+    Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->name('cart.items.destroy');
+
     Route::get('/orders/history', [OrderController::class, 'history'])->name('orders.history');
     Route::get('/orders/{order}/payment-submitted', [OrderController::class, 'paymentSubmitted'])->name('orders.payment.submitted');
     Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])->name('orders.payment');
@@ -34,7 +40,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::post('/orders/{order}/proof', [OrderController::class, 'uploadProof'])->name('orders.proof');
     Route::post('/orders/{order}/items/{orderItem}/review', [ProductReviewController::class, 'store'])->name('orders.items.review.store');
 
-    Route::get('/checkout/{product_id}', [OrderController::class, 'checkout'])->name('checkout');
+    Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
     Route::post('/orders/checkout', [OrderController::class, 'store'])->name('orders.store');
 
 });

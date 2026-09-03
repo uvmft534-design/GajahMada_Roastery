@@ -115,7 +115,7 @@ export default function App({ products = [] }) {
             <button onClick={() => setIsSearchOpen((open) => !open)} aria-label="Cari produk" aria-expanded={isSearchOpen} className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
             
             <Link
-              href={auth && auth.user ? (products && products.length ? route('checkout', products[0].product_id) : route('home')) : route('login')}
+              href={auth && auth.user ? route('cart.index') : route('login')}
               aria-label="Keranjang belanja"
               className="hover:text-[#D4813E] transition-transform hover:scale-110"
             >
@@ -401,7 +401,7 @@ export default function App({ products = [] }) {
                         <span className="font-bold text-lg">Rp {Number(item.price).toLocaleString('id-ID')}</span>
                         <div className="text-[10px] text-[#2C1E16]/40 font-mono">ID: #{item.product_id}</div>
                       </div>
-                      <Link href={auth && auth.user ? route('checkout', item.product_id) : route('login')} className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/20 hover:scale-110">
+                      <Link href={auth && auth.user ? route('cart.store', item.product_id) : route('login')} method={auth && auth.user ? 'post' : 'get'} as="button" className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/20 hover:scale-110">
                         <ShoppingBag size={16} />
                       </Link>
                     </div>

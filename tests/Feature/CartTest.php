@@ -1,0 +1,63 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Cart;
+use App\Models\CartItem;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class CartTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_adding_a_product_redirects_customer_to_their_persistent_cart(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create(['stock' => 10]);
+
+        $this->actingAs($customer)->post(route('cart.store', $product->product_id), ['qty' => 2])
+            ->assertRedirect(route('cart.index'));
+
+        $this->assertDatabaseHas('cart_items', ['product_id' => $product->product_id, 'qty' => 2, 'brew_method' => 'filter']);
+    }
+
+    public function test_adding_the_same_product_and_brew_method_combines_the_quantity(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create(['stock' => 10]);
+
+        $this->actingAs($customer)->post(route('cart.store', $product->product_id), ['qty' => 1]);
+        $this->actingAs($customer)->post(route('cart.store', $product->product_id), ['qty' => 2]);
+
+        $this->assertSame(1, CartItem::count());
+        $this->assertDatabaseHas('cart_items', ['product_id' => $product->product_id, 'qty' => 3]);
+    }
+
+    public function test_customer_can_only_open_checkout_with_their_own_selected_cart_items(): void
+    {
+        $owner = User::factory()->create(['role' => 'customer']);
+        $other = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create();
+        $cart = Cart::create(['user_id' => $owner->id]);
+        $item = CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+
+        $this->actingAs($owner)->get(route('checkout', ['items' => [$item->id]]))
+            ->assertInertia(fn ($page) => $page->component('Checkout')->where('items.0.id', $item->id));
+        $this->actingAs($other)->get(route('checkout', ['items' => [$item->id]]))->assertForbidden();
+    }
+
+    public function test_customer_cannot_update_or_delete_another_customers_cart_item(): void
+    {
+        $owner = User::factory()->create(['role' => 'customer']);
+        $other = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create(['stock' => 10]);
+        $cart = Cart::create(['user_id' => $owner->id]);
+        $item = CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+
+        $this->actingAs($other)->patch(route('cart.items.update', $item->id), ['qty' => 2, 'brew_method' => 'filter'])->assertNotFound();
+        $this->actingAs($other)->delete(route('cart.items.destroy', $item->id))->assertNotFound();
+    }
+}

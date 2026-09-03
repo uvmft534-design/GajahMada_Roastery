@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\PaymentSetting;
 use App\Models\Product;
@@ -15,14 +17,19 @@ class CheckoutTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_brew_method_is_required(): void
+    public function test_checkout_requires_at_least_one_selected_cart_item(): void
     {
-        $this->checkout(['brew_method' => null])->assertSessionHasErrors('brew_method');
+        $this->checkout(['cart_item_ids' => []])->assertSessionHasErrors('cart_item_ids');
     }
 
-    public function test_brew_method_must_be_espresso_or_filter(): void
+    public function test_checkout_rejects_cart_items_owned_by_another_customer(): void
     {
-        $this->checkout(['brew_method' => 'cold_brew'])->assertSessionHasErrors('brew_method');
+        $other = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create();
+        $cart = Cart::create(['user_id' => $other->id]);
+        $item = CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+
+        $this->checkout(['cart_item_ids' => [$item->id]])->assertSessionHasErrors('cart_item_ids');
     }
 
     public function test_customer_note_is_saved_with_the_order(): void
@@ -231,6 +238,34 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('order_items', ['brew_method' => 'espresso']);
     }
 
+    public function test_selected_cart_items_create_one_order_with_multiple_order_items_and_leave_unselected_items_in_cart(): void
+    {
+        $user = User::factory()->create(['role' => 'customer']);
+        PaymentSetting::create(['bank_name' => 'BCA', 'account_name' => 'Kopi Gajahmada', 'account_number' => '111111', 'is_active' => true, 'created_by' => $user->id]);
+        $first = Product::factory()->create(['price' => 100000, 'stock' => 10]);
+        $second = Product::factory()->create(['price' => 200000, 'stock' => 10]);
+        $third = Product::factory()->create(['price' => 50000, 'stock' => 10]);
+        $cart = Cart::create(['user_id' => $user->id]);
+        $firstItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $first->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+        $secondItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $second->product_id, 'qty' => 1, 'brew_method' => 'espresso']);
+        $unselectedItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $third->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+
+        $this->actingAs($user)->post(route('orders.store'), [
+            'cart_item_ids' => [$firstItem->id, $secondItem->id],
+            'shipping_method' => 'regular', 'payment_method' => 'virtual_account',
+            'customer_name' => 'Andi', 'customer_phone' => '08123456789', 'customer_address' => 'Jl. Contoh No. 1',
+        ])->assertRedirect();
+
+        $order = Order::sole();
+        $this->assertSame(2, $order->items()->count());
+        $this->assertSame(300000, $order->subtotal);
+        $this->assertDatabaseMissing('cart_items', ['id' => $firstItem->id]);
+        $this->assertDatabaseMissing('cart_items', ['id' => $secondItem->id]);
+        $this->assertDatabaseHas('cart_items', ['id' => $unselectedItem->id]);
+        $this->assertDatabaseHas('products', ['product_id' => $first->product_id, 'stock' => 9]);
+        $this->assertDatabaseHas('products', ['product_id' => $second->product_id, 'stock' => 9]);
+    }
+
     private function checkout(array $overrides = [])
     {
         $user = User::factory()->create(['role' => 'customer']);
@@ -242,10 +277,18 @@ class CheckoutTest extends TestCase
             'stock' => 10,
         ]);
 
-        return $this->actingAs($user)->post(route('orders.store'), array_merge([
+        $cart = Cart::create(['user_id' => $user->id]);
+        $cartItem = CartItem::create([
+            'cart_id' => $cart->id,
             'product_id' => $product->product_id,
             'qty' => 2,
-            'brew_method' => 'filter',
+            'brew_method' => $overrides['brew_method'] ?? 'filter',
+        ]);
+
+        unset($overrides['brew_method']);
+
+        return $this->actingAs($user)->post(route('orders.store'), array_merge([
+            'cart_item_ids' => [$cartItem->id],
             'shipping_method' => 'regular',
             'payment_method' => 'virtual_account',
             'customer_name' => 'Andi',
