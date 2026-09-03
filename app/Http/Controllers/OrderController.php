@@ -6,8 +6,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use App\Models\User;
 use App\Services\OrderFulfillmentService;
+use App\Services\RevenueAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -162,34 +164,35 @@ class OrderController extends Controller
         ]);
     }
 
-    public function adminIndex()
+    public function adminIndex(RevenueAnalyticsService $revenueAnalytics)
     {
         $orders = Order::with('items.product', 'user', 'courier')->latest('created_at')->get();
-
-        $chartData = [];
-        $chartLabels = [];
-
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
-            $revenue = Order::whereDate('created_at', $date)->where('payment_status', 'paid')->where('status', '!=', 'cancelled')->sum('total_amount');
-            $chartData[] = (int) $revenue;
-            $chartLabels[] = now()->subDays($i)->format('d M');
-        }
+        $dashboardRevenueAnalytics = $revenueAnalytics->dashboardAnalytics();
+        $dashboardRevenueAnalytics['top_products'] = $revenueAnalytics->topProducts();
+        $dashboardRevenueAnalytics['frequent_customers'] = $revenueAnalytics->frequentCustomers();
+        $revenueTrend = $dashboardRevenueAnalytics['trend'];
 
         $analytics = [
-            'monthlyRevenue' => Order::whereMonth('created_at', now()->month)->where('payment_status', 'paid')->where('status', '!=', 'cancelled')->sum('total_amount'),
+            'monthlyRevenue' => (int) Order::revenueValid()->whereMonth('created_at', now()->month)->sum('total_amount'),
             'monthlyOrderCount' => Order::whereMonth('created_at', now()->month)->count(),
             'transactions' => Order::count(),
-            'avgTransaction' => Order::avg('total_amount') ?: 0,
-            'chartData' => $chartData,
-            'chartLabels' => $chartLabels,
+            'avgTransaction' => (function () {
+                $valid = Order::revenueValid();
+                $count = (clone $valid)->count();
+
+                return $count ? (int) round((clone $valid)->sum('total_amount') / $count) : 0;
+            })(),
+            'chartData' => collect($revenueTrend)->pluck('revenue')->all(),
+            'chartLabels' => collect($revenueTrend)->pluck('label')->all(),
         ];
 
         return Inertia::render('Dashboard_Admin', [
             'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
             'orders' => $orders,
             'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
+            'categories' => ProductCategory::query()->orderBy('name')->pluck('name'),
             'analytics' => $analytics,
+            'revenueAnalytics' => $dashboardRevenueAnalytics,
         ]);
     }
 
@@ -209,8 +212,9 @@ class OrderController extends Controller
 
     public function requestPickup(Request $request, Order $order, OrderFulfillmentService $fulfillment)
     {
-        $validated = $request->validate(['courier_id' => 'required|integer|exists:users,id']);
+        $validated = $request->validate(['courier_id' => 'required|integer|exists:users,id', 'delivery_note' => 'nullable|string|max:1000']);
         $fulfillment->requestPickup($order, User::findOrFail($validated['courier_id']));
+        $order->update(['delivery_note' => $validated['delivery_note'] ?? $order->delivery_note]);
 
         return back()->with('success', 'Pickup berhasil diminta kepada courier.');
     }

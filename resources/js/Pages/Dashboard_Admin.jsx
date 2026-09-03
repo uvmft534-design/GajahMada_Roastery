@@ -3,7 +3,7 @@ import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
 import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard, FileText } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
-export default function DashboardAdmin({ products = [], orders = [], analytics = {}, couriers = [] }) {
+export default function DashboardAdmin({ products = [], orders = [], analytics = {}, couriers = [], categories = [] }) {
   const { auth } = usePage().props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,6 +19,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
     category: '',
     price: '',
     stock: '',
+    weight_grams: '',
     description: '',
     image: null,
   });
@@ -36,6 +37,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
       category: product.category || '',
       price: product.price,
       stock: product.stock,
+      weight_grams: product.weight_grams || '',
       description: product.description || '',
       image: null, // file baru opsional saat edit
     });
@@ -250,7 +252,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                         {order.status === 'awaiting_payment' && order.payment_status === 'paid' && <button onClick={() => router.post(route('admin.orders.process', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Proses Pesanan</button>}
                         {order.status === 'processing' && <button onClick={() => router.post(route('admin.orders.packed', order.order_id), {}, { preserveScroll: true })} className="rounded-xl bg-[#D4813E] px-3 py-2 text-xs font-bold text-white">Tandai Sudah Dikemas</button>}
                         {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('admin.orders.cancel', order.order_id), {}, { preserveScroll: true })} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600">Batalkan</button>}
-                        {order.status === 'packed' && (couriers.length === 0 ? <div className="flex w-full flex-wrap items-center justify-end gap-2"><span className="text-xs font-bold text-[#2C1E16]/50">Belum ada Courier tersedia</span><button disabled className="h-10 rounded-xl bg-[#D4813E] px-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Request Pickup</button></div> : <div className="flex w-full flex-wrap items-center justify-end gap-2"><select value={courierAssignments[order.order_id] || ''} onChange={(event) => setCourierAssignments({ ...courierAssignments, [order.order_id]: event.target.value })} className="h-10 min-w-[160px] rounded-xl border border-[#2C1E16]/10 bg-white px-3 text-sm text-[#2C1E16]" aria-label={`Pilih courier untuk ${order.order_number}`}><option value="" disabled>Pilih Courier</option>{couriers.map((courier) => <option key={courier.id} value={courier.id}>{courier.name}</option>)}</select><button disabled={!courierAssignments[order.order_id]} onClick={() => router.post(route('admin.orders.request-pickup', order.order_id), { courier_id: courierAssignments[order.order_id] }, { preserveScroll: true })} className="h-10 rounded-xl bg-[#D4813E] px-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Request Pickup</button></div>)}
+                        {order.status === 'packed' && (couriers.length === 0 ? <div className="flex w-full flex-wrap items-center justify-end gap-2"><span className="text-xs font-bold text-[#2C1E16]/50">Belum ada Courier tersedia</span><button disabled className="h-10 rounded-xl bg-[#D4813E] px-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Request Pickup</button></div> : <div className="flex w-full flex-wrap items-center justify-end gap-2"><select value={courierAssignments[order.order_id] || ''} onChange={(event) => setCourierAssignments({ ...courierAssignments, [order.order_id]: event.target.value })} className="h-10 min-w-[160px] rounded-xl border border-[#2C1E16]/10 bg-white px-3 text-sm text-[#2C1E16]" aria-label={`Pilih courier untuk ${order.order_number}`}><option value="" disabled>Pilih Courier</option>{couriers.map((courier) => <option key={courier.id} value={courier.id}>{courier.name}</option>)}</select><button disabled={!courierAssignments[order.order_id]} onClick={() => router.post(route('admin.orders.request-pickup', order.order_id), { courier_id: courierAssignments[order.order_id], delivery_note: window.prompt('Catatan pengantaran untuk courier (opsional)', order.delivery_note || '') || null }, { preserveScroll: true })} className="h-10 rounded-xl bg-[#D4813E] px-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Request Pickup</button></div>)}
                         {['pickup_requested', 'picked_up', 'shipped'].includes(order.status) && <div className="text-xs font-bold text-[#D4813E]">Courier: {order.courier?.name || '-'}{order.tracking_number ? ` · ${order.tracking_number}` : ''}</div>}
                         {order.status === 'delivered' && <span className="text-xs font-bold text-[#D4813E]">Sudah Sampai</span>}
                         {order.status === 'completed' && <span className="text-xs font-bold text-[#D4813E]">Selesai</span>}
@@ -386,13 +388,11 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">
                   Kategori (`category`)
                 </label>
-                <input 
-                  type="text" 
+                <select
                   value={data.category}
                   onChange={(e) => setData('category', e.target.value)}
-                  placeholder="Contoh: Single Origin, Espresso, Blend"
                   className="w-full px-4 py-2.5 rounded-xl border border-[#2C1E16]/15 text-sm focus:outline-none focus:border-[#D4813E]"
-                />
+                ><option value="">Pilih kategori</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select>
                 {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
               </div>
 
@@ -401,15 +401,16 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">
                     Harga (`price`)
                   </label>
-                  <input 
-                    type="number" 
+                  <div className="flex items-center rounded-xl border border-[#2C1E16]/15"><span className="pl-4 text-sm font-bold">Rp</span><input
+                    type="text" inputMode="numeric"
                     required
-                    value={data.price}
-                    onChange={(e) => setData('price', e.target.value)}
-                    placeholder="95000"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#2C1E16]/15 text-sm focus:outline-none focus:border-[#D4813E]"
-                  />
+                    value={data.price === '' ? '' : Number(data.price).toLocaleString('id-ID')}
+                    onChange={(e) => setData('price', e.target.value.replace(/\D/g, ''))}
+                    placeholder="125.000"
+                    className="w-full px-3 py-2.5 text-sm focus:outline-none"
+                  /></div>
                 </div>
+                <div><label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">Berat Produk (g)</label><input type="number" min="1" required value={data.weight_grams} onChange={(e) => setData('weight_grams', e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#2C1E16]/15 text-sm" /></div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">

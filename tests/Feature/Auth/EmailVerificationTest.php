@@ -55,4 +55,20 @@ class EmailVerificationTest extends TestCase
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
+
+    public function test_email_is_not_verified_with_an_invalid_signature(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1($user->email)]
+        );
+
+        $response = $this->actingAs($user)->get($verificationUrl.'&tampered=1');
+
+        $response->assertForbidden();
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
 }

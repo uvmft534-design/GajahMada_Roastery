@@ -65,10 +65,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin/reports')->
     Route::get('/', [ReportController::class, 'index'])->name('index');
     Route::get('/create', [ReportController::class, 'create'])->name('create');
     Route::post('/', [ReportController::class, 'store'])->name('store');
-    Route::post('/preview', [ReportController::class, 'preview'])->name('preview');
     Route::get('/{report}', [ReportController::class, 'show'])->name('show');
-    Route::put('/{report}', [ReportController::class, 'update'])->name('update');
-    Route::post('/{report}/submit', [ReportController::class, 'submit'])->name('submit');
+    Route::get('/{report}/pdf', [ReportController::class, 'pdf'])->name('pdf');
+    Route::get('/{report}/excel', [ReportController::class, 'excel'])->name('excel');
 });
 
 Route::middleware(['auth', 'verified', 'role:courier'])->group(function () {
@@ -90,4 +89,6 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin
     Route::get('/reports', [SuperAdminReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/{report}', [SuperAdminReportController::class, 'show'])->name('reports.show');
     Route::post('/reports/{report}/review', [SuperAdminReportController::class, 'review'])->name('reports.review');
+    Route::get('/reports/{report}/pdf', [SuperAdminReportController::class, 'pdf'])->name('reports.pdf');
+    Route::get('/reports/{report}/excel', [SuperAdminReportController::class, 'excel'])->name('reports.excel');
 });

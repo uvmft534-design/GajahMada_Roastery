@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Report;
+use App\Services\ReportExportService;
 use App\Services\ReportGeneratorService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,64 +19,50 @@ class ReportController extends Controller
 
     public function index(Request $request): Response
     {
-        return Inertia::render('Admin/Reports/Index', ['reports' => $request->user()->createdReports()->latest()->get(), 'statusLabels' => $this->statusLabels()]);
+        return Inertia::render('Admin/Reports/Index', ['reports' => $request->user()->createdReports()->latest('generated_at')->get(), 'statusLabels' => $this->labels()]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('Admin/Reports/Form', ['report' => null, 'types' => $this->types(), 'statusLabels' => $this->statusLabels()]);
+        return Inertia::render('Admin/Reports/Form', ['types' => $this->types()]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $report = $request->user()->createdReports()->create($data + ['report_number' => $this->number(), 'status' => 'draft']);
+        $report = DB::transaction(fn () => $request->user()->createdReports()->create($data + ['report_number' => $this->number(), 'summary_data' => $this->generator->generate($data['type'], $data['period_start'] ?? null, $data['period_end'] ?? null), 'generated_at' => now(), 'status' => 'generated']));
 
-        return redirect()->route('admin.reports.show', $report)->with('success', 'Draft laporan dibuat.');
+        return redirect()->route('admin.reports.show', $report)->with('success', 'Laporan berhasil dibuat.');
     }
 
-    public function show(Request $request, Report $report): Response
+    public function show(Report $report, ReportExportService $exports): Response
     {
         $this->authorize('view', $report);
 
-        return Inertia::render('Admin/Reports/Show', ['report' => $report->load(['creator:id,name', 'reviewer:id,name']), 'preview' => in_array($report->status, Report::EDITABLE_STATUSES, true) ? $this->generator->generate($report->type, $report->period_start?->toDateString(), $report->period_end?->toDateString()) : null, 'types' => $this->types(), 'statusLabels' => $this->statusLabels()]);
+        return Inertia::render('Admin/Reports/Show', ['report' => $report->load(['creator:id,name', 'reviewer:id,name']), 'presentation' => $exports->presentation($report), 'statusLabels' => $this->labels()]);
     }
 
-    public function update(Request $request, Report $report): RedirectResponse
+    public function pdf(Report $report, ReportExportService $exports)
     {
-        $this->authorize('update', $report);
-        $report->update($this->validated($request));
+        $this->authorize('view', $report);
 
-        return back()->with('success', 'Draft laporan diperbarui.');
+        return $exports->pdf($report->load('creator'));
     }
 
-    public function preview(Request $request): Response
+    public function excel(Report $report, ReportExportService $exports)
     {
-        $data = $this->validated($request);
+        $this->authorize('view', $report);
 
-        return Inertia::render('Admin/Reports/Preview', ['form' => $data, 'preview' => $this->generator->generate($data['type'], $data['period_start'] ?? null, $data['period_end'] ?? null), 'types' => $this->types()]);
-    }
-
-    public function submit(Request $request, Report $report): RedirectResponse
-    {
-        $this->authorize('submit', $report);
-        DB::transaction(function () use ($report): void {
-            $locked = Report::lockForUpdate()->findOrFail($report->id);
-            abort_unless(in_array($locked->status, Report::EDITABLE_STATUSES, true), 422, 'Laporan tidak dapat dikirim pada status ini.');
-            $locked->update(['summary_data' => $this->generator->generate($locked->type, $locked->period_start?->toDateString(), $locked->period_end?->toDateString()), 'generated_at' => now(), 'submitted_at' => now(), 'status' => 'submitted', 'reviewed_by' => null, 'reviewed_at' => null, 'review_note' => null]);
-        });
-
-        return back()->with('success', 'Laporan telah dikirim ke Super Admin.');
+        return $exports->excel($report->load('creator'));
     }
 
     private function validated(Request $request): array
     {
-        $data = $request->validate(['type' => ['required', 'in:'.implode(',', Report::TYPES)], 'period_start' => ['nullable', 'date', 'required_unless:type,inventory'], 'period_end' => ['nullable', 'date', 'required_unless:type,inventory', 'after_or_equal:period_start'], 'title' => ['nullable', 'string', 'max:255'], 'admin_note' => ['nullable', 'string', 'max:5000']]);
+        $data = $request->validate(['type' => ['required', 'in:'.implode(',', Report::TYPES)], 'period_start' => ['nullable', 'date', 'required_unless:type,inventory'], 'period_end' => ['nullable', 'date', 'required_unless:type,inventory', 'after_or_equal:period_start'], 'admin_note' => ['nullable', 'string', 'max:5000']]);
         if ($data['type'] === 'inventory') {
             $data['period_start'] = null;
             $data['period_end'] = null;
-        }
-        $data['title'] = filled($data['title'] ?? null) ? $data['title'] : $this->types()[$data['type']];
+        } $data['title'] = $this->types()[$data['type']];
 
         return $data;
     }
@@ -94,8 +81,8 @@ class ReportController extends Controller
         return ['sales' => 'Laporan Penjualan', 'orders' => 'Laporan Pesanan', 'payments' => 'Laporan Pembayaran', 'deliveries' => 'Laporan Pengiriman', 'inventory' => 'Laporan Persediaan'];
     }
 
-    private function statusLabels(): array
+    private function labels(): array
     {
-        return ['draft' => 'Draft', 'submitted' => 'Menunggu Review', 'revision_requested' => 'Perlu Revisi', 'approved' => 'Disetujui', 'rejected' => 'Ditolak'];
+        return ['generated' => 'Dibuat', 'reviewed' => 'Sudah Diperiksa'];
     }
 }

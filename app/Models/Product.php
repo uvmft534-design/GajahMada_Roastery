@@ -19,6 +19,7 @@ class Product extends Model
         'category',
         'price',
         'stock',
+        'weight_grams',
         'description',
         'image',
     ];
@@ -26,6 +27,7 @@ class Product extends Model
     protected $casts = [
         'price' => 'integer',
         'stock' => 'integer',
+        'weight_grams' => 'integer',
     ];
 
     public function reviews(): HasMany

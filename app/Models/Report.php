@@ -9,7 +9,7 @@ class Report extends Model
 {
     public const TYPES = ['sales', 'orders', 'payments', 'deliveries', 'inventory'];
 
-    public const EDITABLE_STATUSES = ['draft', 'revision_requested'];
+    public const STATUSES = ['generated', 'reviewed'];
 
     protected $fillable = ['report_number', 'created_by', 'type', 'title', 'period_start', 'period_end', 'admin_note', 'summary_data', 'status', 'generated_at', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_note'];
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,7 @@ class Order extends Model
         'customer_phone',
         'customer_address',
         'customer_note',
+        'delivery_note',
         'subtotal',
         'delivery_fee',
         'total_amount',
@@ -76,5 +78,15 @@ class Order extends Model
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope orders whose payment has been approved and which were not cancelled.
+     */
+    public function scopeRevenueValid(Builder $query): Builder
+    {
+        return $query
+            ->where('payment_status', 'paid')
+            ->where('status', '!=', 'cancelled');
     }
 }
