@@ -7,7 +7,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
-use App\Models\ProductCategory;
 use App\Models\User;
 use App\Services\OrderFulfillmentService;
 use App\Services\RevenueAnalyticsService;
@@ -217,7 +216,6 @@ class OrderController extends Controller
 
     public function adminIndex(RevenueAnalyticsService $revenueAnalytics)
     {
-        $orders = Order::with('items.product', 'user', 'courier')->latest('created_at')->get();
         $dashboardRevenueAnalytics = $revenueAnalytics->dashboardAnalytics();
         $dashboardRevenueAnalytics['top_products'] = $revenueAnalytics->topProducts();
         $dashboardRevenueAnalytics['frequent_customers'] = $revenueAnalytics->frequentCustomers();
@@ -234,12 +232,23 @@ class OrderController extends Controller
         ];
 
         return Inertia::render('Dashboard_Admin', [
-            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
-            'orders' => $orders,
-            'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
-            'categories' => ProductCategory::query()->orderBy('name')->pluck('name'),
+            'section' => 'overview',
             'analytics' => $analytics,
+            'attention' => [
+                'paymentConfirmation' => Order::query()->where('payment_status', 'pending_confirmation')->count(),
+                'readyToProcess' => Order::query()->where('status', 'awaiting_payment')->where('payment_status', 'paid')->count(),
+                'lowStock' => Product::query()->where('stock', '<=', 5)->count(),
+            ],
             'revenueAnalytics' => $dashboardRevenueAnalytics,
+        ]);
+    }
+
+    public function adminOrders()
+    {
+        return Inertia::render('Dashboard_Admin', [
+            'section' => 'orders',
+            'orders' => Order::with('items.product', 'user', 'courier')->latest('created_at')->get(),
+            'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

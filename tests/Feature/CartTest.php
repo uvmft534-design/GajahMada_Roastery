@@ -36,6 +36,17 @@ class CartTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['product_id' => $product->product_id, 'qty' => 3]);
     }
 
+    public function test_landing_page_shares_the_current_customers_cart_item_count(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create();
+        $cart = Cart::create(['user_id' => $customer->id]);
+        CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 3, 'brew_method' => 'filter']);
+
+        $this->actingAs($customer)->get(route('home'))
+            ->assertInertia(fn ($page) => $page->where('cartItemCount', 3));
+    }
+
     public function test_customer_can_only_open_checkout_with_their_own_selected_cart_items(): void
     {
         $owner = User::factory()->create(['role' => 'customer']);

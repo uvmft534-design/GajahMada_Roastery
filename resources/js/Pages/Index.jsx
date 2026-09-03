@@ -56,7 +56,7 @@ const staggerContainerSlow = {
 };
 
 export default function App({ products = [] }) {
-  const { auth } = usePage().props;
+  const { auth, cartItemCount = 0 } = usePage().props;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,9 +117,10 @@ export default function App({ products = [] }) {
             <Link
               href={auth && auth.user ? route('cart.index') : route('login')}
               aria-label="Keranjang belanja"
-              className="hover:text-[#D4813E] transition-transform hover:scale-110"
+              className="relative hover:text-[#D4813E] transition-transform hover:scale-110"
             >
               <ShoppingBag size={20} />
+              {cartItemCount > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{cartItemCount}</span>}
             </Link>
 
             {auth && auth.user ? (

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -13,7 +14,9 @@ class ProductController extends Controller
     public function index()
     {
         return Inertia::render('Dashboard_Admin', [
+            'section' => 'products',
             'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
+            'categories' => ProductCategory::query()->orderBy('name')->pluck('name'),
         ]);
     }
 

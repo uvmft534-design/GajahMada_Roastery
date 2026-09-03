@@ -54,6 +54,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(function () {
     Route::get('/admin/dashboard', [OrderController::class, 'adminIndex'])->name('admin.dashboard');
+    Route::get('/admin/orders', [OrderController::class, 'adminOrders'])->name('admin.orders.index');
+    Route::get('/admin/products', [ProductController::class, 'index'])->name('admin.products.index');
     Route::post('/admin/orders/{order}/process', [OrderController::class, 'processOrder'])->name('admin.orders.process');
     Route::post('/admin/orders/{order}/packed', [OrderController::class, 'markPacked'])->name('admin.orders.packed');
     Route::post('/admin/orders/{order}/request-pickup', [OrderController::class, 'requestPickup'])->name('admin.orders.request-pickup');

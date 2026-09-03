@@ -20,7 +20,7 @@ const staggerContainer = {
 };
 
 export default function Show() {
-  const { product, auth } = usePage().props;
+  const { product, auth, cartItemCount = 0 } = usePage().props;
 
   if (!product) {
     return (
@@ -69,6 +69,7 @@ export default function Show() {
               <div className="w-10 h-10 rounded-full bg-white border border-[#2C1E16]/15 flex items-center justify-center shadow-sm">
                 <ShoppingBag size={20} />
               </div>
+              {cartItemCount > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{cartItemCount}</span>}
             </Link>
           </div>
         </div>

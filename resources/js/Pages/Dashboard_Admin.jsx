@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
-import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard, FileText } from 'lucide-react';
+import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard, FileText, LayoutDashboard } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
-export default function DashboardAdmin({ products = [], orders = [], analytics = {}, couriers = [], categories = [] }) {
+export default function DashboardAdmin({ section = 'overview', products = [], orders = [], analytics = {}, attention = {}, couriers = [], categories = [] }) {
   const { auth } = usePage().props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,9 +89,9 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
           </div>
 
           <nav className="space-y-2 text-sm font-medium">
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/20">
-              <Package size={18} /> Products (CRUD)
-            </a>
+            <AdminNav href={route('admin.dashboard')} active={section === 'overview'} icon={<LayoutDashboard size={18} />}>Ringkasan</AdminNav>
+            <AdminNav href={route('admin.orders.index')} active={section === 'orders'} icon={<Package size={18} />}>Pesanan</AdminNav>
+            <AdminNav href={route('admin.products.index')} active={section === 'products'} icon={<Coffee size={18} />}>Produk</AdminNav>
             <Link href={route('admin.payment-settings.index')} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 transition-colors text-[#FDFBF7]/70 hover:text-white">
               <CreditCard size={18} /> Payment Settings
             </Link>
@@ -118,8 +118,8 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-6 border-b border-[#2C1E16]/10">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Manajemen Produk Database</h1>
-            <p className="text-xs md:text-sm text-[#2C1E16]/60 mt-1"></p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{{ overview: 'Ringkasan Operasional', orders: 'Kelola Pesanan', products: 'Kelola Produk' }[section]}</h1>
+            <p className="text-xs md:text-sm text-[#2C1E16]/60 mt-1">{{ overview: 'Prioritas kerja hari ini tanpa tabel operasional yang panjang.', orders: 'Tinjau status pembayaran dan fulfillment pesanan.', products: 'Kelola katalog produk tanpa mengganggu halaman pesanan.' }[section]}</p>
           </div>
           <div className="bg-white px-4 py-2.5 rounded-2xl border border-[#2C1E16]/10 shadow-sm text-xs font-semibold flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
@@ -127,6 +127,7 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
           </div>
         </div>
 
+        {section === 'overview' && <>
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl border border-[#2C1E16]/10 shadow-sm flex items-center gap-4">
@@ -201,7 +202,14 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
             )}
           </div>
         </section>
+        <section className="grid gap-4 md:grid-cols-3">
+          <AttentionCard title="Perlu verifikasi pembayaran" count={attention.paymentConfirmation} href={route('admin.orders.index')} />
+          <AttentionCard title="Siap diproses" count={attention.readyToProcess} href={route('admin.orders.index')} />
+          <AttentionCard title="Produk stok rendah" count={attention.lowStock} href={route('admin.products.index')} />
+        </section>
+        </>}
 
+        {section === 'orders' && <>
         {/* Orders filter tabs */}
         <section className="bg-white rounded-3xl border border-[#2C1E16]/10 shadow-sm overflow-hidden">
           <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-[#2C1E16]/10">
@@ -266,7 +274,9 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
         </section>
 
         {selectedProof && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-xl"><div className="flex items-center justify-between gap-4"><div><p className="font-bold">Bukti Pembayaran</p><p className="text-xs text-[#2C1E16]/60">{selectedProof.order.order_number}</p></div><button onClick={() => setSelectedProof(null)} className="rounded-xl border px-3 py-2 text-xs font-bold">Tutup</button></div><div className="mt-5 max-h-[70vh] overflow-auto rounded-2xl bg-[#FDFBF7] p-3"><img src={selectedProof.url} alt="Bukti pembayaran" className="max-h-[65vh] w-full object-contain" /><a href={selectedProof.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-[#D4813E]">Buka Bukti</a></div></div></div>}
+        </>}
 
+        {section === 'products' && <>
         {/* Table */}
         <div className="bg-white rounded-3xl border border-[#2C1E16]/10 shadow-sm overflow-hidden mt-8">
           <div className="p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-[#2C1E16]/10">
@@ -348,11 +358,12 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
             </table>
           </div>
         </div>
+        </>}
 
       </main>
 
       {/* MODAL FORM */}
-      {isModalOpen && (
+      {section === 'products' && isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-[#2C1E16]/10">
             
@@ -477,4 +488,12 @@ export default function DashboardAdmin({ products = [], orders = [], analytics =
 
     </div>
   );
+}
+
+function AdminNav({ href, active, icon, children }) {
+  return <Link href={href} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${active ? 'bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/20' : 'text-[#FDFBF7]/70 hover:bg-white/10 hover:text-white'}`}>{icon}{children}</Link>;
+}
+
+function AttentionCard({ title, count = 0, href }) {
+  return <Link href={href} className="rounded-2xl border border-[#2C1E16]/10 bg-white p-5 shadow-sm transition-colors hover:border-[#D4813E]/50"><p className="text-sm font-semibold text-[#2C1E16]/70">{title}</p><p className="mt-2 text-3xl font-bold">{count}</p><span className="mt-3 inline-block text-xs font-bold text-[#D4813E]">Buka modul →</span></Link>;
 }
