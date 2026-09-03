@@ -113,7 +113,8 @@ class OrderController extends Controller
             return $order;
         });
 
-        return redirect()->route('orders.payment', $order->order_id)->with('success', 'Pesanan dibuat, silakan lanjutkan pembayaran.');
+        return redirect()->route('orders.payment', $order->order_id)
+            ->with('success', 'Pesanan berhasil dibuat.');
     }
 
     public function payment(Order $order)
@@ -121,6 +122,17 @@ class OrderController extends Controller
         $this->authorize('view', $order);
 
         return Inertia::render('Payment', [
+            'order' => $order,
+        ]);
+    }
+
+    public function paymentSubmitted(Order $order)
+    {
+        $this->authorize('view', $order);
+
+        abort_unless($order->payment_status === 'pending_confirmation', 404);
+
+        return Inertia::render('PaymentSubmitted', [
             'order' => $order,
         ]);
     }
@@ -147,7 +159,11 @@ class OrderController extends Controller
 
     public function history()
     {
-        $orders = Order::with('items.product')->where('user_id', Auth::id())->latest('created_at')->get();
+        $orders = Order::with('items.product')
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->latest('order_id')
+            ->get();
 
         return Inertia::render('OrderHistory', [
             'orders' => $orders,
@@ -307,7 +323,8 @@ class OrderController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Bukti pembayaran berhasil diunggah.');
+        return redirect()->route('orders.payment.submitted', $order->order_id)
+            ->with('success', 'Bukti pembayaran berhasil dikirim.');
     }
 
     public function approvePayment(Request $request, Order $order)

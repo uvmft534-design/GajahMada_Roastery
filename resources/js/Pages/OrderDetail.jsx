@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, UploadCloud, CheckCircle2, Star } from 'lucide-react';
+import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, Star } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
 function ReviewForm({ order, item }) {
@@ -25,6 +25,12 @@ function ReviewForm({ order, item }) {
 
 export default function OrderDetail({ order, items = [] }) {
   const statusLabel = orderStatusLabel(order.status);
+  const paymentStatusLabel = ({
+    unpaid: 'Menunggu pembayaran',
+    pending_confirmation: 'Pembayaran sedang diverifikasi',
+    paid: 'Pembayaran dikonfirmasi',
+    rejected: 'Bukti pembayaran perlu diunggah ulang',
+  }[order.payment_status] || order.payment_status || 'Menunggu pembayaran');
   const money = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -32,15 +38,7 @@ export default function OrderDetail({ order, items = [] }) {
   });
 
   const shippingLabel = order.shipping_method === 'instant' ? 'Instant' : 'Reguler';
-  const { data, setData, post, processing, errors } = useForm({ proof: null });
-
-  const uploadProof = (e) => {
-    e.preventDefault();
-    post(route('orders.proof', order.order_id), {
-      forceFormData: true,
-      preserveScroll: true,
-    });
-  };
+  const canContinuePayment = order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16]">
@@ -83,8 +81,8 @@ export default function OrderDetail({ order, items = [] }) {
                 </div>
                 <div className="text-sm font-bold mt-2">Virtual Account</div>
                 <div className="text-xs text-[#2C1E16]/60 mt-1">{order.payment_bank_name || 'Bank'} · {order.payment_account_name || 'Company Payment Account'}</div>
-                <div className="text-xs text-[#2C1E16]/60 mt-1">VA: {order.va_number || 'Menunggu nomor VA admin'}</div>
-                <div className="text-[11px] uppercase mt-2 font-bold text-[#2C1E16]/50">Status pembayaran: {order.payment_status || 'unpaid'}</div>
+                <div className="text-xs text-[#2C1E16]/60 mt-1">VA: {order.va_number || 'Nomor Virtual Account akan tersedia segera.'}</div>
+                <div className="text-[11px] uppercase mt-2 font-bold text-[#2C1E16]/50">Status pembayaran: {paymentStatusLabel}</div>
               </div>
 
               <div className="rounded-2xl bg-[#FDFBF7] p-4 border border-[#2C1E16]/10">
@@ -105,6 +103,9 @@ export default function OrderDetail({ order, items = [] }) {
               </div>
             )}
             {order.payment_status === 'rejected' && <div className="mt-4 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</div>}
+            {canContinuePayment && <Link href={route('orders.payment', { order: order.order_id })} className="mt-4 inline-flex rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white hover:bg-[#b86b30]">
+              {order.payment_status === 'rejected' ? 'Upload Ulang Bukti Pembayaran' : 'Bayar Sekarang'}
+            </Link>}
             {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('orders.cancel', order.order_id))} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600">Batalkan Pesanan</button>}
             {order.status === 'delivered' && <button onClick={() => router.post(route('orders.complete', order.order_id))} className="mt-4 rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Konfirmasi Barang Diterima</button>}
 
@@ -149,7 +150,7 @@ export default function OrderDetail({ order, items = [] }) {
                 <div className="w-2.5 h-2.5 rounded-full bg-white/40 mt-1" />
                 <div>
                   <div className="text-sm font-bold">Sedang Dikemas</div>
-                  <div className="text-[11px] text-white/50">Admin mempersiapkan kirim</div>
+                  <div className="text-[11px] text-white/50">Pesanan sedang disiapkan untuk pengiriman</div>
                 </div>
               </div>
 
@@ -165,7 +166,7 @@ export default function OrderDetail({ order, items = [] }) {
                 <div className="w-2.5 h-2.5 rounded-full bg-white/40 mt-1" />
                 <div>
                   <div className="text-sm font-bold">Selesai</div>
-                  <div className="text-[11px] text-white/50">Verifikasi tanda terima</div>
+                  <div className="text-[11px] text-white/50">Konfirmasi penerimaan pesanan</div>
                 </div>
               </div>
             </div>
@@ -206,18 +207,6 @@ export default function OrderDetail({ order, items = [] }) {
               </Link>
             </div>
 
-            <form onSubmit={uploadProof} className="mt-8 border-t border-white/10 pt-6">
-              <div className="text-xs font-bold uppercase tracking-wider text-white/60">Upload Bukti Bayar</div>
-              <label className="mt-3 flex items-center gap-2 px-4 py-3 border border-white/20 rounded-2xl text-sm text-white cursor-pointer hover:bg-white/10">
-                <UploadCloud size={16} />
-                <span>{data.proof ? data.proof.name : 'Pilih bukti transfer'}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => setData('proof', e.target.files[0])} />
-              </label>
-              {errors.proof && <div className="text-red-300 text-xs mt-2">{errors.proof}</div>}
-              <button type="submit" disabled={processing} className="mt-3 w-full bg-white text-[#2C1E16] px-4 py-3 rounded-2xl font-bold text-xs disabled:opacity-50">
-                {processing ? 'Mengunggah...' : 'Kirim Bukti'}
-              </button>
-            </form>
           </aside>
         </section>
       </div>

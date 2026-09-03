@@ -489,7 +489,7 @@ export default function App() {
                   disabled={processing || cartItems.length === 0}
                   className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/20 flex items-center justify-center gap-2 group disabled:opacity-50"
                 >
-                  {processing ? 'Memproses...' : 'Bayar Sekarang'}
+                  {processing ? 'Memproses...' : 'Buat Pesanan & Lanjutkan Pembayaran'}
                   <ArrowLeft size={18} className="rotate-180 group-hover:translate-x-1 transition-transform" />
                 </motion.button>
                 

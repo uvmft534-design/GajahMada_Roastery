@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Building2, CheckCircle2, Copy, UploadCloud } from 'lucide-react';
 
 export default function Payment({ order }) {
+  const { flash = {} } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({ proof: null });
   const [copied, setCopied] = useState(false);
   const money = new Intl.NumberFormat('id-ID', {
@@ -38,6 +39,13 @@ export default function Payment({ order }) {
       </nav>
 
       <main className="max-w-6xl mx-auto px-6 py-12">
+        {flash.success && <div role="status" className="mb-8 flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+          <CheckCircle2 className="mt-0.5 shrink-0" size={21} aria-hidden="true" />
+          <div>
+            <p className="font-bold">{flash.success}</p>
+            {flash.success === 'Pesanan berhasil dibuat.' && <p className="mt-1 text-sm">Selesaikan pembayaran untuk melanjutkan pesanan Anda.</p>}
+          </div>
+        </div>}
         <div className="grid lg:grid-cols-[1.15fr_.85fr] gap-8 items-start">
           <section className="bg-white rounded-[2rem] border border-[#2C1E16]/5 shadow-sm p-6 md:p-9">
             <div className="flex items-center gap-3">
@@ -69,12 +77,12 @@ export default function Payment({ order }) {
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => setData('proof', event.target.files?.[0] ?? null)} />
               </label>
               {errors.proof && <p className="mt-2 text-xs text-red-500">{errors.proof}</p>}
-              {order.payment_proof && <p className="mt-3 text-sm text-emerald-600 font-medium">Bukti pembayaran sudah dikirim dan sedang menunggu konfirmasi.</p>}
+              {order.payment_proof && <p className="mt-3 text-sm text-emerald-600 font-medium">Pembayaran sedang diverifikasi. Pesanan akan diproses setelah pembayaran dikonfirmasi.</p>}
               <button type="submit" disabled={processing || !data.proof} className="mt-5 w-full h-14 rounded-full bg-[#D4813E] text-white font-bold shadow-lg shadow-[#D4813E]/20 hover:bg-[#b86b30] disabled:opacity-50 transition-colors">
                 {processing ? 'Mengirim...' : 'Kirim Bukti Pembayaran'}
               </button>
             </form>}
-            {!canUpload && <p className="mt-6 text-sm text-[#2C1E16]/60">{order.payment_status === 'paid' ? 'Pembayaran telah dikonfirmasi.' : 'Bukti pembayaran sedang menunggu konfirmasi.'}</p>}
+            {!canUpload && <p className="mt-6 text-sm text-[#2C1E16]/60">{order.payment_status === 'paid' ? 'Pembayaran telah dikonfirmasi.' : 'Pembayaran sedang diverifikasi. Pesanan akan diproses setelah pembayaran dikonfirmasi.'}</p>}
           </section>
 
           <aside className="bg-[#2C1E16] text-[#FDFBF7] rounded-[2rem] shadow-xl p-7 md:p-8 sticky top-8">

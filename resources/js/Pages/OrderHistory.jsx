@@ -1,14 +1,21 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { PackageCheck, Truck, ClipboardCheck } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
 export default function OrderHistory({ orders = [] }) {
+  const { flash = {} } = usePage().props;
   const money = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     maximumFractionDigits: 0,
   });
+  const paymentStatusLabel = (status) => ({
+    unpaid: 'Menunggu pembayaran',
+    pending_confirmation: 'Pembayaran sedang diverifikasi',
+    paid: 'Pembayaran dikonfirmasi',
+    rejected: 'Bukti pembayaran perlu diunggah ulang',
+  }[status] || status);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16]">
@@ -24,6 +31,11 @@ export default function OrderHistory({ orders = [] }) {
             Kembali ke Shop
           </Link>
         </div>
+
+        {flash.success && <div role="status" className="mb-6 flex items-center gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+          <PackageCheck size={21} aria-hidden="true" />
+          <p className="font-bold">{flash.success}</p>
+        </div>}
 
         <section className="bg-white rounded-[2rem] border border-[#2C1E16]/10 shadow-sm p-6 md:p-8">
           {orders.length === 0 ? (
@@ -44,6 +56,7 @@ export default function OrderHistory({ orders = [] }) {
                     <div>
                       <div className="text-xs uppercase tracking-wide text-[#2C1E16]/50">Status</div>
                       <div className="font-bold text-[#D4813E] uppercase mt-1">{orderStatusLabel(order.status)}</div>
+                      <div className="mt-1 text-xs text-[#2C1E16]/60">{paymentStatusLabel(order.payment_status)}</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wide text-[#2C1E16]/50">Total</div>

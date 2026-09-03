@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
     Route::get('/orders/history', [OrderController::class, 'history'])->name('orders.history');
+    Route::get('/orders/{order}/payment-submitted', [OrderController::class, 'paymentSubmitted'])->name('orders.payment.submitted');
     Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])->name('orders.payment');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/tracking', [OrderController::class, 'tracking'])->name('orders.tracking');
