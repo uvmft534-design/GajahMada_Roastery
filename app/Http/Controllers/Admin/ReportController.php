@@ -19,7 +19,40 @@ class ReportController extends Controller
 
     public function index(Request $request): Response
     {
-        return Inertia::render('Admin/Reports/Index', ['reports' => $request->user()->createdReports()->latest('generated_at')->get(), 'statusLabels' => $this->labels()]);
+        $filters = $request->validate(['search' => 'nullable|string|max:255', 'type' => 'nullable|in:'.implode(',', Report::TYPES), 'status' => 'nullable|in:generated,reviewed', 'archive' => 'nullable|in:active,archived,all', 'generated_from' => 'nullable|date', 'generated_to' => 'nullable|date|after_or_equal:generated_from', 'period_from' => 'nullable|date', 'period_to' => 'nullable|date|after_or_equal:period_from']);
+        $query = $request->user()->createdReports()->latest('generated_at');
+        $query->when($filters['search'] ?? null, fn ($query, $search) => $query->where(fn ($query) => $query->where('report_number', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%")->orWhere('admin_note', 'like', "%{$search}%")));
+        $query->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type));
+        $query->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
+        $archive = $filters['archive'] ?? 'active';
+        if ($archive === 'active') {
+            $query->whereNull('archived_at');
+        }
+        if ($archive === 'archived') {
+            $query->whereNotNull('archived_at');
+        }
+        $query->when($filters['generated_from'] ?? null, fn ($query, $date) => $query->whereDate('generated_at', '>=', $date));
+        $query->when($filters['generated_to'] ?? null, fn ($query, $date) => $query->whereDate('generated_at', '<=', $date));
+        $query->when($filters['period_from'] ?? null, fn ($query, $date) => $query->whereDate('period_end', '>=', $date));
+        $query->when($filters['period_to'] ?? null, fn ($query, $date) => $query->whereDate('period_start', '<=', $date));
+
+        return Inertia::render('Admin/Reports/Index', ['reports' => $query->paginate(15)->withQueryString(), 'filters' => $filters + ['archive' => $archive], 'statusLabels' => $this->labels(), 'types' => $this->types()]);
+    }
+
+    public function archive(Request $request, Report $report): RedirectResponse
+    {
+        $this->authorize('view', $report);
+        $report->update(['archived_at' => now(), 'archived_by' => $request->user()->id]);
+
+        return back()->with('success', 'Laporan diarsipkan.');
+    }
+
+    public function restore(Report $report): RedirectResponse
+    {
+        $this->authorize('view', $report);
+        $report->update(['archived_at' => null, 'archived_by' => null]);
+
+        return back()->with('success', 'Laporan dipulihkan.');
     }
 
     public function create(): Response

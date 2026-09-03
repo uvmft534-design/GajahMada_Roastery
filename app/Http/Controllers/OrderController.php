@@ -243,11 +243,26 @@ class OrderController extends Controller
         ]);
     }
 
-    public function adminOrders()
+    public function adminOrders(Request $request)
     {
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'status' => 'nullable|string',
+            'payment_status' => 'nullable|string',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+        $query = Order::with('items.product', 'user', 'courier')->latest('created_at');
+        $query->when($filters['search'] ?? null, fn ($query, $search) => $query->where(fn ($query) => $query->where('order_number', 'like', "%{$search}%")->orWhere('customer_name', 'like', "%{$search}%")->orWhere('customer_phone', 'like', "%{$search}%")->orWhereHas('items', fn ($query) => $query->where('product_name', 'like', "%{$search}%"))));
+        $query->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
+        $query->when($filters['payment_status'] ?? null, fn ($query, $status) => $query->where('payment_status', $status));
+        $query->when($filters['from'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '>=', $date));
+        $query->when($filters['to'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '<=', $date));
+
         return Inertia::render('Dashboard_Admin', [
             'section' => 'orders',
-            'orders' => Order::with('items.product', 'user', 'courier')->latest('created_at')->get(),
+            'orders' => $query->paginate(15)->withQueryString(),
+            'filters' => $filters,
             'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
         ]);
     }

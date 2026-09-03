@@ -74,6 +74,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin/reports')->
     Route::get('/', [ReportController::class, 'index'])->name('index');
     Route::get('/create', [ReportController::class, 'create'])->name('create');
     Route::post('/', [ReportController::class, 'store'])->name('store');
+    Route::post('/{report}/archive', [ReportController::class, 'archive'])->name('archive');
+    Route::post('/{report}/restore', [ReportController::class, 'restore'])->name('restore');
     Route::get('/{report}', [ReportController::class, 'show'])->name('show');
     Route::get('/{report}/pdf', [ReportController::class, 'pdf'])->name('pdf');
     Route::get('/{report}/excel', [ReportController::class, 'excel'])->name('excel');

@@ -3,15 +3,16 @@ import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
 import { Coffee, Package, Users, Plus, Edit, Trash2, LogOut, TrendingUp, X, Image as ImageIcon, CreditCard, FileText, LayoutDashboard } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
-export default function DashboardAdmin({ section = 'overview', products = [], orders = [], analytics = {}, attention = {}, couriers = [], categories = [] }) {
+export default function DashboardAdmin({ section = 'overview', products = [], orders = [], analytics = {}, revenueAnalytics = {}, attention = {}, filters = {}, couriers = [], categories = [] }) {
   const { auth } = usePage().props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [orderFilter, setOrderFilter] = useState('all');
+  const [orderFilter, setOrderFilter] = useState(filters.status || 'all');
   const [selectedProof, setSelectedProof] = useState(null);
   const [courierAssignments, setCourierAssignments] = useState({});
-  const filteredOrders = orderFilter === 'all' ? orders : orders.filter((order) => order.status === orderFilter);
+  const orderRows = Array.isArray(orders) ? orders : orders.data || [];
+  const filteredOrders = orderFilter === 'all' ? orderRows : orderRows.filter((order) => order.status === orderFilter);
 
   // Inertia Form Hook untuk kirim data & file gambar ke backend
   const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
@@ -177,30 +178,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
             <h3 className="font-bold text-lg">Revenue 7 Hari Terakhir</h3>
             <p className="text-xs text-[#2C1E16]/60 mt-1">Data order masuk untuk 7 hari terakhir</p>
           </div>
-          <div className="p-6 sm:p-8 flex items-end gap-4 min-h-[220px]">
-            {Array.isArray(analytics.chartData) && analytics.chartData.length > 0 ? (
-              (() => {
-                const maxValue = Math.max(...analytics.chartData, 1);
-                return analytics.chartData.map((value, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-full flex justify-center items-end h-36">
-                      <div className="w-10 rounded-t-xl bg-[#D4813E] transition-all" style={{ height: `${Math.max((Number(value) / maxValue) * 150, value > 0 ? 8 : 0)}px` }}></div>
-                    </div>
-                    <span className="text-[10px] font-bold text-[#2C1E16]/60">{`D${idx + 1}`}</span>
-                  </div>
-                ));
-              })()
-            ) : (
-              Array.from({ length: 7 }).map((_, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full flex justify-center items-end h-36">
-                    <div className="w-10 rounded-t-xl bg-[#D4813E]" style={{ height: '0px' }}></div>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#2C1E16]/60">{`D${idx + 1}`}</span>
-                </div>
-              ))
-            )}
-          </div>
+          <RevenueLineChart trend={revenueAnalytics.trend || []} summary={revenueAnalytics.summary || {}} />
         </section>
         <section className="grid gap-4 md:grid-cols-3">
           <AttentionCard title="Perlu verifikasi pembayaran" count={attention.paymentConfirmation} href={route('admin.orders.index')} />
@@ -221,6 +199,8 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
               {[['all', 'Semua'], ['awaiting_payment', 'Menunggu Pembayaran'], ['processing', 'Diproses'], ['packed', 'Sudah Dikemas'], ['pickup_requested', 'Menunggu Pickup'], ['shipped', 'Dikirim'], ['delivered', 'Sampai'], ['cancelled', 'Dibatalkan']].map(([value, label]) => <button key={value} onClick={() => setOrderFilter(value)} className={`px-3 py-2 rounded-xl border border-[#2C1E16]/10 ${orderFilter === value ? 'bg-[#FDFBF7]' : ''}`}>{label}</button>)}
             </div>
           </div>
+
+          <form onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); router.get(route('admin.orders.index'), Object.fromEntries([...form.entries()].filter(([, value]) => value))); }} className="grid gap-3 border-b border-[#2C1E16]/10 p-5 md:grid-cols-4"><input name="search" defaultValue={filters.search || ''} placeholder="Order, customer, HP, produk" className="rounded-xl border p-2.5 md:col-span-2" /><select name="payment_status" defaultValue={filters.payment_status || ''} className="rounded-xl border p-2.5"><option value="">Semua pembayaran</option><option value="unpaid">Belum dibayar</option><option value="pending_confirmation">Perlu verifikasi</option><option value="rejected">Ditolak</option><option value="paid">Dibayar</option></select><button className="rounded-xl bg-[#2C1E16] px-3 font-bold text-white">Cari</button><input name="from" type="date" defaultValue={filters.from || ''} className="rounded-xl border p-2.5" /><input name="to" type="date" defaultValue={filters.to || ''} className="rounded-xl border p-2.5" /><Link href={route('admin.dashboard')} className="rounded-xl border px-3 py-2.5 text-center font-bold">← Ringkasan</Link><Link href={route('admin.orders.index')} className="rounded-xl border px-3 py-2.5 text-center font-bold">Reset</Link></form>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
@@ -271,6 +251,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
               </tbody>
             </table>
           </div>
+          {orders.links && <div className="flex flex-wrap gap-2 border-t border-[#2C1E16]/10 p-4">{orders.links.map(link => <button key={link.label} disabled={!link.url} onClick={() => link.url && router.visit(link.url)} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-40" dangerouslySetInnerHTML={{ __html: link.label }} />)}</div>}
         </section>
 
         {selectedProof && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-xl"><div className="flex items-center justify-between gap-4"><div><p className="font-bold">Bukti Pembayaran</p><p className="text-xs text-[#2C1E16]/60">{selectedProof.order.order_number}</p></div><button onClick={() => setSelectedProof(null)} className="rounded-xl border px-3 py-2 text-xs font-bold">Tutup</button></div><div className="mt-5 max-h-[70vh] overflow-auto rounded-2xl bg-[#FDFBF7] p-3"><img src={selectedProof.url} alt="Bukti pembayaran" className="max-h-[65vh] w-full object-contain" /><a href={selectedProof.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-[#D4813E]">Buka Bukti</a></div></div></div>}
@@ -496,4 +477,15 @@ function AdminNav({ href, active, icon, children }) {
 
 function AttentionCard({ title, count = 0, href }) {
   return <Link href={href} className="rounded-2xl border border-[#2C1E16]/10 bg-white p-5 shadow-sm transition-colors hover:border-[#D4813E]/50"><p className="text-sm font-semibold text-[#2C1E16]/70">{title}</p><p className="mt-2 text-3xl font-bold">{count}</p><span className="mt-3 inline-block text-xs font-bold text-[#D4813E]">Buka modul →</span></Link>;
+}
+
+function RevenueLineChart({ trend, summary }) {
+  const [active, setActive] = useState(null);
+  const max = Math.max(...trend.map(point => Number(point.revenue)), 1);
+  if (!trend.some(point => Number(point.revenue) > 0)) return <div className="p-8 text-sm text-[#2C1E16]/60">Belum ada revenue valid dalam 7 hari terakhir.</div>;
+  const points = trend.map((point, index) => `${30 + index * 90},${180 - (Number(point.revenue) / max) * 140}`).join(' ');
+  const point = active === null ? null : trend[active];
+  const format = amount => `Rp${Number(amount || 0).toLocaleString('id-ID')}`;
+  const change = summary.change_percentage;
+  return <div className="p-6 sm:p-8"><div className="mb-4 grid gap-2 text-sm sm:grid-cols-3"><p><b>{format(summary.current_revenue)}</b><br/><span className="text-[#2C1E16]/60">revenue 7 hari</span></p><p><b>{summary.valid_order_count || 0}</b><br/><span className="text-[#2C1E16]/60">pesanan valid</span></p><p><b>{change === null ? 'Aktivitas baru' : `${change >= 0 ? '+' : ''}${change || 0}%`}</b><br/><span className="text-[#2C1E16]/60">vs 7 hari sebelumnya</span></p></div><div className="relative"><svg viewBox="0 0 600 220" className="h-56 w-full overflow-visible"><line x1="30" y1="180" x2="580" y2="180" stroke="#2C1E16" strokeOpacity=".15" /><line x1="30" y1="40" x2="30" y2="180" stroke="#2C1E16" strokeOpacity=".15" /><polyline points={points} fill="none" stroke="#D4813E" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />{trend.map((item, index) => { const x = 30 + index * 90; const y = 180 - (Number(item.revenue) / max) * 140; return <g key={item.date}><circle cx={x} cy={y} r="8" fill="transparent" onMouseEnter={() => setActive(index)} onMouseLeave={() => setActive(null)} /><circle cx={x} cy={y} r="4" fill="#D4813E" /><text x={x} y="205" textAnchor="middle" className="fill-[#2C1E16]/60 text-[11px]">{item.label}</text></g>; })}</svg>{point && <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-xl bg-[#2C1E16] px-4 py-3 text-xs text-white shadow-xl"><b>{point.label}</b><br/>Revenue valid: {format(point.revenue)}<br/>Pesanan valid: {point.valid_order_count}<br/>AOV harian: {format(point.daily_aov)}</div>}</div></div>;
 }
