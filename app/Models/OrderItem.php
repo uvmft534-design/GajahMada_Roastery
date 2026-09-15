@@ -35,4 +35,9 @@ class OrderItem extends Model
     {
         return $this->hasOne(ProductReview::class, 'order_item_id', 'order_item_id');
     }
+
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'order_item_id', 'order_item_id');
+    }
 }

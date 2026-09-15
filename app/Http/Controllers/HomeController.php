@@ -3,23 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class HomeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Index', [
-            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest()->get(),
-        ]);
+        return Inertia::render('Index', $this->catalogProps($request));
     }
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
-        return Inertia::render('Dashboard', [
-            'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest()->get(),
-        ]);
+        return Inertia::render('Dashboard', $this->catalogProps($request));
     }
 
     public function show($product_id)
@@ -34,6 +31,16 @@ class HomeController extends Controller
         return Inertia::render('Show', [
             'product' => $product,
         ]);
+    }
+
+    public function espressoCollection()
+    {
+        return Inertia::render('Collections/Espresso');
+    }
+
+    public function filterCollection()
+    {
+        return Inertia::render('Collections/Filter');
     }
 
     public function checkout(Request $request, $product_id)
@@ -53,5 +60,23 @@ class HomeController extends Controller
             'product' => $product,
             'qty' => $qty,
         ]);
+    }
+
+    private function catalogProps(Request $request): array
+    {
+        $categories = ProductCategory::query()->orderBy('name')->pluck('name')->values();
+        $selectedCategory = trim((string) $request->query('category', ''));
+        $selectedCategory = $categories->contains($selectedCategory) ? $selectedCategory : null;
+
+        return [
+            'products' => Product::query()
+                ->withAvg('reviews', 'rating')
+                ->withCount('reviews')
+                ->when($selectedCategory, fn ($query) => $query->where('category', $selectedCategory))
+                ->latest()
+                ->get(),
+            'categories' => $categories,
+            'selectedCategory' => $selectedCategory,
+        ];
     }
 }

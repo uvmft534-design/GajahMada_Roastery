@@ -111,7 +111,7 @@ class ReportController extends Controller
 
     private function types(): array
     {
-        return ['sales' => 'Laporan Penjualan', 'orders' => 'Laporan Pesanan', 'payments' => 'Laporan Pembayaran', 'deliveries' => 'Laporan Pengiriman', 'inventory' => 'Laporan Persediaan'];
+        return ['sales' => 'Laporan Penjualan', 'orders' => 'Laporan Pesanan', 'payments' => 'Laporan Pembayaran', 'deliveries' => 'Laporan Pengiriman', 'inventory' => 'Laporan Persediaan', 'complaints' => 'Laporan Komplain'];
     }
 
     private function labels(): array

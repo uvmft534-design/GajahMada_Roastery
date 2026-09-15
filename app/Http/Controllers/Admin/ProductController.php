@@ -16,7 +16,7 @@ class ProductController extends Controller
         return Inertia::render('Dashboard_Admin', [
             'section' => 'products',
             'products' => Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->latest('product_id')->get(),
-            'categories' => ProductCategory::query()->orderBy('name')->pluck('name'),
+            'categories' => ProductCategory::query()->orderBy('name')->pluck('name')->values(),
         ]);
     }
 

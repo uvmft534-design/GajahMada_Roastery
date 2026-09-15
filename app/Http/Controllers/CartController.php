@@ -25,6 +25,7 @@ class CartController extends Controller
         $validated = $request->validate([
             'qty' => 'nullable|integer|min:1|max:100',
             'brew_method' => 'nullable|in:espresso,filter',
+            'stay_on_product' => 'nullable|boolean',
         ]);
 
         DB::transaction(function () use ($request, $product, $validated) {
@@ -52,6 +53,10 @@ class CartController extends Controller
                 ]);
             }
         });
+
+        if ($request->boolean('stay_on_product')) {
+            return back()->with('success', 'Produk ditambahkan ke keranjang.');
+        }
 
         return redirect()->route('cart.index')->with('success', 'Produk ditambahkan ke keranjang.');
     }

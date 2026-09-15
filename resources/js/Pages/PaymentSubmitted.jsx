@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { orderStatusLabel } from '../utils/orderStatus';
 
 export default function PaymentSubmitted({ order }) {
@@ -15,9 +16,9 @@ export default function PaymentSubmitted({ order }) {
     <div className="min-h-screen bg-[#FDFBF7] px-6 py-12 text-[#2C1E16]">
       <Head title="Bukti Pembayaran Dikirim" />
 
-      <main className="mx-auto max-w-xl rounded-[2rem] border border-[#2C1E16]/10 bg-white p-7 text-center shadow-sm md:p-10">
-        <CheckCircle2 size={48} className="mx-auto text-emerald-600" aria-hidden="true" />
-        <h1 className="mt-5 text-3xl font-bold">Bukti Pembayaran Berhasil Dikirim</h1>
+      <motion.main initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-xl overflow-hidden rounded-[2rem] border border-[#2C1E16]/10 bg-white text-center shadow-xl">
+        <div className="bg-[#2C1E16] px-7 pb-14 pt-10 text-white md:px-10"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#D4813E] shadow-lg shadow-black/20"><CheckCircle2 size={29} aria-hidden="true" /></div><p className="mt-5 text-xs font-bold uppercase tracking-[.2em] text-[#D4813E]">Pembayaran diterima</p><h1 className="mt-2 text-3xl font-bold">Bukti berhasil dikirim</h1></div>
+        <div className="px-7 pb-8 md:px-10 md:pb-10">
         <p className="mt-2 text-sm text-[#2C1E16]/60">Pembayaran Anda sedang diverifikasi.</p>
         <p className="mt-1 text-sm text-[#2C1E16]/60">Pesanan akan diproses setelah pembayaran dikonfirmasi.</p>
 
@@ -33,7 +34,8 @@ export default function PaymentSubmitted({ order }) {
           <Link href={route('orders.show', { order: order.order_id })} className="rounded-2xl border border-[#2C1E16]/15 px-5 py-3 font-bold hover:bg-[#2C1E16] hover:text-white">Lihat Detail Pesanan</Link>
         </div>
         <Link href={route('home')} className="mt-5 inline-block text-sm font-semibold text-[#D4813E] hover:underline">Kembali Belanja</Link>
-      </main>
+        </div>
+      </motion.main>
     </div>
   );
 }

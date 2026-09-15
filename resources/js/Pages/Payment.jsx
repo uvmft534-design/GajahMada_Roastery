@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Building2, CheckCircle2, Copy, UploadCloud } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Payment({ order }) {
   const { flash = {} } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({ proof: null });
   const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const money = new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
   });
 
   const uploadProof = (event) => {
     event.preventDefault();
-    post(route('orders.proof', order.order_id), { forceFormData: true, preserveScroll: true });
+    setConfirming(true);
   };
 
   const copyVaNumber = async () => {
@@ -100,6 +102,7 @@ export default function Payment({ order }) {
           </aside>
         </div>
       </main>
+      <AnimatePresence>{confirming && <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] grid place-items-center bg-[#2C1E16]/50 p-4"><motion.div initial={{scale:.94,y:16}} animate={{scale:1,y:0}} exit={{scale:.94,y:16}} className="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#FFE9D2] text-[#D4813E]"><UploadCloud size={22}/></span><h2 className="mt-5 text-2xl font-bold">Kirim bukti pembayaran?</h2><p className="mt-2 text-sm leading-relaxed text-[#2C1E16]/65">Pastikan foto bukti transfer terlihat jelas, nominalnya sesuai, dan nomor referensi dapat dibaca. Tim kami akan memverifikasinya.</p><div className="mt-7 grid grid-cols-2 gap-3"><button type="button" onClick={() => setConfirming(false)} className="rounded-full border border-[#2C1E16]/15 px-4 py-3 font-bold hover:bg-[#FDFBF7]">Periksa lagi</button><button type="button" onClick={() => { setConfirming(false); post(route('orders.proof', order.order_id), { forceFormData: true, preserveScroll: true }); }} disabled={processing} className="rounded-full bg-[#D4813E] px-4 py-3 font-bold text-white hover:bg-[#b86b30] disabled:opacity-60">Ya, kirim bukti</button></div></motion.div></motion.div>}</AnimatePresence>
     </div>
   );
 }

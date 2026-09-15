@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\RoleChangeLog;
+use App\Models\StaffAccess;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -19,18 +22,50 @@ class GoogleAccountLinker
         }
 
         if (! $user) {
-            return User::create([
+            $user = User::create([
                 'name' => $name ?: 'Google User', 'email' => $email, 'google_id' => $googleId,
                 'role' => 'customer', 'email_verified_at' => now(), 'password' => Hash::make(Str::random(48)),
             ]);
-        }
-
-        if ($user->google_id && $user->google_id !== $googleId) {
+        } elseif ($user->google_id && $user->google_id !== $googleId) {
             throw new \RuntimeException('Email ini telah terhubung ke akun Google lain.');
+        } else {
+            $user->forceFill(['google_id' => $googleId, 'email_verified_at' => $user->email_verified_at ?? now()])->save();
         }
 
-        $user->forceFill(['google_id' => $googleId, 'email_verified_at' => $user->email_verified_at ?? now()])->save();
+        $this->activateStaffAccess($user, $email);
 
         return $user;
+    }
+
+    private function activateStaffAccess(User $user, string $email): void
+    {
+        DB::transaction(function () use ($user, $email): void {
+            $access = StaffAccess::query()
+                ->where('email', $email)
+                ->whereIn('status', ['pending', 'active'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $access) {
+                return;
+            }
+
+            if ($user->role !== $access->role) {
+                $oldRole = $user->role;
+                $user->update(['role' => $access->role]);
+                RoleChangeLog::create([
+                    'target_user_id' => $user->id,
+                    'changed_by' => $access->created_by,
+                    'old_role' => $oldRole,
+                    'new_role' => $access->role,
+                ]);
+            }
+
+            $access->update([
+                'status' => 'active',
+                'activated_user_id' => $user->id,
+                'activated_at' => $access->activated_at ?? now(),
+            ]);
+        });
     }
 }

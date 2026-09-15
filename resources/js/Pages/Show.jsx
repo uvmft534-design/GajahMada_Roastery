@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Star, Heart, 
   Minus, Plus, Store, CheckCircle2, ChevronLeft, ExternalLink 
 } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
+import { hasWishlisted, toggleWishlist } from '../utils/wishlist';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -35,11 +36,45 @@ export default function Show() {
   }
 
   const [qty, setQty] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(() => hasWishlisted(product.product_id));
+  const [isAdding, setIsAdding] = useState(false);
+  const [cartFeedback, setCartFeedback] = useState('');
+  const [isWishlisting, setIsWishlisting] = useState(false);
+  const [wishlistFeedback, setWishlistFeedback] = useState('');
+  const [flyingProduct, setFlyingProduct] = useState(null);
+  const productImageRef = useRef(null);
+  const cartButtonRef = useRef(null);
+  const wishlistButtonRef = useRef(null);
+  const addToCartTimerRef = useRef(null);
+  const wishlistTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    window.clearTimeout(addToCartTimerRef.current);
+    window.clearTimeout(wishlistTimerRef.current);
+  }, []);
 
   const handleQtyChange = (type) => {
     if (type === 'min' && qty > 1) setQty(qty - 1);
     if (type === 'plus' && qty < (product.stock || 99)) setQty(qty + 1);
+  };
+
+  const animateProductTo = (targetRef) => {
+    const productImageBounds = productImageRef.current?.getBoundingClientRect();
+    const targetBounds = targetRef.current?.getBoundingClientRect();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!productImageBounds || !targetBounds || reduceMotion) return reduceMotion;
+
+    const size = Math.min(productImageBounds.width, productImageBounds.height, 112);
+    setFlyingProduct({
+      x: productImageBounds.left + (productImageBounds.width - size) / 2,
+      y: productImageBounds.top + (productImageBounds.height - size) / 2,
+      size,
+      targetX: targetBounds.left + targetBounds.width / 2 - size / 2,
+      targetY: targetBounds.top + targetBounds.height / 2 - size / 2,
+    });
+
+    return false;
   };
 
   const handleAddToCart = () => {
@@ -48,7 +83,44 @@ export default function Show() {
       return;
     }
 
-    router.post(route('cart.store', product.product_id), { qty });
+    if (isAdding || Number(product.stock) < 1) return;
+
+    const reduceMotion = animateProductTo(cartButtonRef);
+
+    setIsAdding(true);
+    setCartFeedback(`${qty} produk sedang dimasukkan ke keranjang.`);
+
+    addToCartTimerRef.current = window.setTimeout(() => {
+      router.post(route('cart.store', product.product_id), { qty, stay_on_product: true }, {
+        preserveScroll: true,
+        onSuccess: () => {
+          setIsAdding(false);
+          setCartFeedback(`${qty} produk berhasil ditambahkan ke keranjang.`);
+        },
+        onError: () => {
+          setFlyingProduct(null);
+          setIsAdding(false);
+          setCartFeedback('Produk belum dapat dimasukkan. Silakan coba lagi.');
+        },
+      });
+    }, reduceMotion ? 0 : 650);
+  };
+
+  const handleWishlist = () => {
+    if (!auth?.user) {
+      window.location.href = route('login');
+      return;
+    }
+
+    if (isWishlisting) return;
+
+    const willBeWishlisted = !isWishlisted;
+    const reduceMotion = willBeWishlisted ? animateProductTo(wishlistButtonRef) : true;
+    toggleWishlist(product);
+    setIsWishlisted(willBeWishlisted);
+    setIsWishlisting(true);
+    setWishlistFeedback(willBeWishlisted ? `${product.product_name} ditambahkan ke wishlist.` : `${product.product_name} dihapus dari wishlist.`);
+    wishlistTimerRef.current = window.setTimeout(() => setIsWishlisting(false), reduceMotion ? 0 : 650);
   };
 
   return (
@@ -56,8 +128,8 @@ export default function Show() {
       
       <nav className="fixed top-0 w-full bg-[#FDFBF7]/90 backdrop-blur-md z-50 border-b border-[#2C1E16]/10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <span className="font-bold text-xl tracking-tight group-hover:text-[#D4813E] transition-colors">Kopi Gajahmada</span>
+          <Link href="/" className="group flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[#2C1E16]/20 bg-white transition-colors hover:border-[#D4813E]">
+            <img src="/images/logo.png" alt="Beranda Kopi Gajahmada" className="h-full w-full object-cover" />
           </Link>
 
           <div className="flex items-center gap-5">
@@ -65,12 +137,27 @@ export default function Show() {
               <ChevronLeft size={18} /> Kembali
             </Link>
             
-            <Link href={auth?.user ? route('cart.index') : route('login')} className="relative">
-              <div className="w-10 h-10 rounded-full bg-white border border-[#2C1E16]/15 flex items-center justify-center shadow-sm">
+            <Link ref={cartButtonRef} href={auth?.user ? route('cart.index') : route('login')} className="relative" aria-label="Buka keranjang">
+              <motion.div
+                animate={isAdding ? { scale: [1, 1.16, 1] } : { scale: 1 }}
+                transition={{ duration: 0.35, delay: 0.48 }}
+                className="w-10 h-10 rounded-full bg-white border border-[#2C1E16]/15 flex items-center justify-center shadow-sm"
+              >
                 <ShoppingBag size={20} />
-              </div>
+              </motion.div>
               {cartItemCount > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{cartItemCount}</span>}
             </Link>
+            <motion.button
+              ref={wishlistButtonRef}
+              type="button"
+              onClick={handleWishlist}
+              aria-label={isWishlisted ? 'Hapus dari wishlist' : 'Tambahkan ke wishlist'}
+              animate={isWishlisting ? { scale: [1, 1.16, 1] } : { scale: 1 }}
+              transition={{ duration: 0.35, delay: 0.48 }}
+              className="grid h-10 w-10 place-items-center rounded-full border border-[#2C1E16]/15 bg-white shadow-sm transition-colors hover:text-red-500"
+            >
+              <Heart size={20} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
+            </motion.button>
           </div>
         </div>
       </nav>
@@ -98,6 +185,7 @@ export default function Show() {
             )}
 
             <motion.img 
+              ref={productImageRef}
               whileHover={{ scale: 1.05, rotate: 2 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} 
@@ -149,24 +237,32 @@ export default function Show() {
             </motion.div>
 
             <motion.div variants={fadeInUp} className="flex flex-col gap-4 mb-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex items-center justify-between border border-[#2C1E16]/20 rounded-full h-14 px-4 sm:w-32 bg-white">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between border border-[#2C1E16]/15 rounded-2xl h-14 px-4 sm:w-40 bg-white">
+                  <span className="text-sm font-medium text-[#2C1E16]/55">Jumlah</span>
+                  <div className="flex items-center gap-4">
                   <button onClick={() => handleQtyChange('min')} className="hover:text-[#D4813E]">
                     <Minus size={18} />
                   </button>
-                  <span className="font-bold text-lg w-8 text-center">{qty}</span>
+                  <AnimatePresence mode="popLayout"><motion.span key={qty} initial={{ opacity: 0, scale: 0.65, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.65 }} transition={{ type: 'spring', stiffness: 420, damping: 22 }} className="font-bold text-lg w-8 text-center">{qty}</motion.span></AnimatePresence>
                   <button onClick={() => handleQtyChange('plus')} className="hover:text-[#D4813E]">
                     <Plus size={18} />
                   </button>
+                  </div>
                 </div>
 
                 <motion.button 
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={handleAddToCart}
-                  className="flex-1 bg-[#2C1E16] text-[#FDFBF7] rounded-full h-14 flex items-center justify-center gap-2 font-bold hover:bg-[#D4813E] transition-colors shadow-lg shadow-[#2C1E16]/10"
+                  disabled={isAdding || Number(product.stock) < 1}
+                  aria-busy={isAdding}
+                  className="w-full min-h-16 bg-[#2C1E16] text-[#FDFBF7] rounded-2xl px-6 flex items-center justify-center gap-3 font-bold text-base hover:bg-[#D4813E] transition-colors shadow-lg shadow-[#2C1E16]/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <ShoppingBag size={20} /> Masukkan Keranjang
+                  <ShoppingBag size={21} /> <span>{Number(product.stock) < 1 ? 'Stok Habis' : isAdding ? 'Menambahkan…' : 'Masukkan ke Keranjang'}</span>
                 </motion.button>
+                <p aria-live="polite" className="min-h-5 text-center text-sm font-medium text-[#D4813E]">
+                  {cartFeedback}
+                </p>
               </div>
 
               <Link href={auth?.user ? route('cart.index') : route('login')} className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/30 hover:bg-[#b86b30] transition-colors grid place-items-center">
@@ -177,12 +273,14 @@ export default function Show() {
             <motion.div variants={fadeInUp}>
               <motion.button 
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setIsWishlisted(!isWishlisted)}
-                className="flex items-center gap-2 text-sm font-semibold text-[#2C1E16]/60 hover:text-[#D4813E] transition-colors"
+                onClick={handleWishlist}
+                disabled={isWishlisting}
+                className="flex items-center gap-2 text-sm font-semibold text-[#2C1E16]/60 transition-colors hover:text-[#D4813E] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Heart size={20} className={isWishlisted ? 'fill-red-500 text-red-500' : ''} />
                 {isWishlisted ? 'Disimpan di Wishlist' : 'Tambah ke Wishlist'}
               </motion.button>
+              <p aria-live="polite" className="mt-1 min-h-5 text-sm font-medium text-[#D4813E]">{wishlistFeedback}</p>
             </motion.div>
 
             <motion.div variants={fadeInUp} className="mt-10 pt-8 border-t border-[#2C1E16]/10">
@@ -200,14 +298,32 @@ export default function Show() {
               </div>
             </motion.div>
 
-            {/* SESUAIKAN JADI product_id */}
-            <motion.div variants={fadeInUp} className="mt-8 text-xs text-[#2C1E16]/40 font-mono">
-              PRODUCT ID: #{product.product_id} — Kopi Gajahmada Verified Item
-            </motion.div>
-
           </motion.div>
         </div>
       </main>
+
+      <AnimatePresence>
+        {flyingProduct && (
+          <motion.img
+            src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none fixed z-[60] rounded-2xl object-contain drop-shadow-2xl"
+            style={{ left: flyingProduct.x, top: flyingProduct.y, width: flyingProduct.size, height: flyingProduct.size }}
+            initial={{ opacity: 0, scale: 0.85, rotate: -8 }}
+            animate={{
+              opacity: [0, 1, 1, 0.2],
+              scale: [0.85, 1, 0.65, 0.2],
+              rotate: [-8, 6, 16, 25],
+              x: [0, (flyingProduct.targetX - flyingProduct.x) * 0.45, (flyingProduct.targetX - flyingProduct.x) * 0.8, flyingProduct.targetX - flyingProduct.x],
+              y: [0, -80, -36, flyingProduct.targetY - flyingProduct.y],
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.65, times: [0, 0.2, 0.82, 1], ease: [0.22, 1, 0.36, 1] }}
+            onAnimationComplete={() => setFlyingProduct(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

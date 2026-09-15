@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, Star } from 'lucide-react';
+import { PackageCheck, Truck, CreditCard, MapPin, Phone, ClipboardCheck, Star, MessageSquareWarning } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
 
 function ReviewForm({ order, item }) {
@@ -21,6 +21,21 @@ function ReviewForm({ order, item }) {
     {errors.comment && <p className="mt-1 text-xs text-red-600">{errors.comment}</p>}
     <button disabled={processing || !data.rating} className="mt-3 rounded-xl bg-[#D4813E] px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Kirim Penilaian</button>
   </form>;
+}
+
+function ComplaintForm({ order, items }) {
+  const { data, setData, post, processing, errors } = useForm({ category: 'product', order_item_id: items[0]?.order_item_id || '', description: '', evidences: [] });
+  const eligible = order.delivered_at && new Date(order.delivered_at).getTime() + 24 * 60 * 60 * 1000 >= Date.now();
+  if (!eligible) return null;
+  return <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+    <div className="flex gap-3"><MessageSquareWarning className="shrink-0 text-amber-700" size={20} /><div><h2 className="font-bold">Ajukan Komplain</h2><p className="mt-1 text-xs text-[#2C1E16]/70">Pengaduan terbuka sampai 1×24 jam setelah pesanan sampai. Sertakan keterangan dan foto bila diperlukan.</p></div></div>
+    <form onSubmit={(event) => { event.preventDefault(); post(route('orders.complaints.store', order.order_id)); }} className="mt-4 space-y-3">
+      <div className="grid gap-3 md:grid-cols-2"><select value={data.category} onChange={(event) => setData('category', event.target.value)} className="rounded-xl border p-3 text-sm"><option value="product">Masalah produk</option><option value="delivery">Masalah pengiriman</option></select>{data.category === 'product' && <select value={data.order_item_id} onChange={(event) => setData('order_item_id', event.target.value)} className="rounded-xl border p-3 text-sm"><option value="">Pilih produk</option>{items.map((item) => <option key={item.order_item_id} value={item.order_item_id}>{item.product_name} (x{item.qty})</option>)}</select>}</div>
+      <textarea value={data.description} onChange={(event) => setData('description', event.target.value)} maxLength="3000" required placeholder="Jelaskan masalah yang Anda alami" className="min-h-28 w-full rounded-xl border p-3 text-sm" />
+      <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => setData('evidences', Array.from(event.target.files).slice(0, 3))} className="block w-full text-xs" /><p className="text-[11px] text-[#2C1E16]/60">Maksimal 3 foto, masing-masing 4 MB (JPG, PNG, atau WEBP).</p>
+      {(errors.description || errors.order_item_id || errors.evidences) && <p className="text-xs text-red-600">{errors.description || errors.order_item_id || errors.evidences}</p>}<button disabled={processing} className="rounded-xl bg-amber-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Kirim Komplain</button>
+    </form>
+  </section>;
 }
 
 export default function OrderDetail({ order, items = [] }) {
@@ -95,11 +110,9 @@ export default function OrderDetail({ order, items = [] }) {
             </div>
 
             {order.payment_proof && (
-              <div className="mt-6 rounded-2xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Bukti Pembayaran</div>
-                <div className="mt-3">
-                  <img src={`/storage/${order.payment_proof}`} alt="Bukti pembayaran" className="w-full max-h-72 object-contain rounded-xl border border-[#2C1E16]/10" />
-                </div>
+              <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-4">
+                <div><div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Bukti Pembayaran</div><p className="mt-1 text-sm text-[#2C1E16]/65">Bukti telah dikirim dan tersimpan dengan aman.</p></div>
+                <a href={route('orders.proof.view', order.order_id)} target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-[#2C1E16]/15 px-4 py-2 text-xs font-bold hover:bg-[#2C1E16] hover:text-white">Lihat bukti</a>
               </div>
             )}
             {order.payment_status === 'rejected' && <div className="mt-4 text-sm text-red-600">Bukti pembayaran ditolak. {order.payment_review_note}</div>}
@@ -108,6 +121,9 @@ export default function OrderDetail({ order, items = [] }) {
             </Link>}
             {order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status) && <button onClick={() => router.post(route('orders.cancel', order.order_id))} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600">Batalkan Pesanan</button>}
             {order.status === 'delivered' && <button onClick={() => router.post(route('orders.complete', order.order_id))} className="mt-4 rounded-xl bg-[#D4813E] px-4 py-2 text-sm font-bold text-white">Konfirmasi Barang Diterima</button>}
+
+            <ComplaintForm order={order} items={items} />
+            {order.complaints?.length > 0 && <section className="mt-6 rounded-2xl border border-[#2C1E16]/10 p-5"><h2 className="font-bold">Komplain Anda</h2><div className="mt-3 space-y-2">{order.complaints.map((complaint) => <Link key={complaint.id} href={route('complaints.show', complaint.id)} className="flex items-center justify-between rounded-xl bg-[#FDFBF7] p-3 text-sm hover:bg-[#D4813E]/10"><span>{complaint.item?.product_name || 'Pengiriman'} · {complaint.category === 'product' ? 'Produk' : 'Pengiriman'}</span><span className="font-bold text-[#D4813E]">{complaint.status}</span></Link>)}</div></section>}
 
             <div className="mt-8">
               <div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Produk</div>

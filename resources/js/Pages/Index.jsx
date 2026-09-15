@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ShoppingBag, User, ArrowRight, Star, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Image as ImageIcon, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { getWishlist, toggleWishlist } from '../utils/wishlist';
 
 const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
 
@@ -29,21 +30,21 @@ const POLICIES = [
 
 // Animasi dari Kiri
 const slideInLeft = {
-  hidden: { opacity: 0, x: -80 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+  hidden: { opacity: 0, x: -36 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
 };
 
 // Animasi dari Kanan
 const slideInRight = {
-  hidden: { opacity: 0, x: 80 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+  hidden: { opacity: 0, x: 36 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
 };
 
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
   }
 };
 
@@ -51,15 +52,23 @@ const staggerContainerSlow = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.25, delayChildren: 0.2 }
+    transition: { staggerChildren: 0.12, delayChildren: 0.08 }
   }
 };
 
-export default function App({ products = [] }) {
+const productCardVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } },
+};
+
+export default function App({ products = [], categories = [], selectedCategory = null }) {
   const { auth, cartItemCount = 0 } = usePage().props;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState(selectedCategory);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [wishlist, setWishlist] = useState([]);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -76,11 +85,22 @@ export default function App({ products = [] }) {
   }, [dropdownRef]);
 
   const scrollConfig = { once: false, amount: 0.2, margin: "0px 0px -100px 0px" };
+  useEffect(() => {
+    const refresh = () => setWishlist(getWishlist());
+    refresh();
+    window.addEventListener('wishlist:changed', refresh);
+    return () => window.removeEventListener('wishlist:changed', refresh);
+  }, []);
+
+  const categoryKey = (category) => String(category || '').trim().toLocaleLowerCase('id-ID');
+  const categoryFilters = ['Semua', ...categories.map((category) => String(category).trim()).filter(Boolean)];
   const filteredProducts = products.filter((product) =>
     [product.product_name, product.category, product.description]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+  const searchResults = products.filter((product) => [product.product_name, product.category, product.description].filter(Boolean).some((value) => String(value).toLowerCase().includes(searchQuery.toLowerCase()))).slice(0, 4);
+  const browseCategory = (category) => { const selected = category === 'Semua' ? null : category; setSearchQuery(''); setActiveCategory(selected); setIsSearchOpen(false); router.get(route('home'), selected ? { category: selected } : {}, { preserveScroll: true }); };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16] font-sans overflow-x-hidden">
@@ -113,9 +133,10 @@ export default function App({ products = [] }) {
 
           <div className="flex items-center gap-5">
             <button onClick={() => setIsSearchOpen((open) => !open)} aria-label="Cari produk" aria-expanded={isSearchOpen} className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
+            <button onClick={() => { window.location.href = route('login'); }} aria-label="Masuk untuk membuka wishlist" className="relative hover:text-[#D4813E] transition-transform hover:scale-110"><Heart size={20} className={wishlist.length ? 'fill-[#D4813E]/20' : ''} />{wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{wishlist.length}</span>}</button>
             
             <Link
-              href={auth && auth.user ? route('cart.index') : route('login')}
+              href={route('login')}
               aria-label="Keranjang belanja"
               className="relative hover:text-[#D4813E] transition-transform hover:scale-110"
             >
@@ -217,6 +238,8 @@ export default function App({ products = [] }) {
         </AnimatePresence>
       </motion.nav>
 
+      <AnimatePresence>{isWishlistOpen && <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ duration: .22 }} className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-[#2C1E16]/10 bg-white p-4 shadow-2xl"><div className="flex items-center justify-between border-b border-[#2C1E16]/10 pb-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Pilihan Anda</p><h2 className="font-bold">Wishlist</h2></div><button onClick={() => setIsWishlistOpen(false)} className="rounded-full p-2 hover:bg-orange-50"><X size={17}/></button></div>{wishlist.length === 0 ? <p className="py-8 text-center text-sm text-[#2C1E16]/60">Belum ada produk yang disukai.</p> : <div className="mt-3 max-h-[60vh] space-y-2 overflow-auto">{wishlist.map((product) => <div key={product.product_id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-[#FFE9D2]/40"><Link href={route('products.show', product.product_id)} onClick={() => setIsWishlistOpen(false)} className="flex min-w-0 flex-1 items-center gap-3"><img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt="" className="h-12 w-12 rounded-xl object-cover"/><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{product.product_name}</strong><small className="text-[#D4813E]">Rp {Number(product.price).toLocaleString('id-ID')}</small></span></Link><button onClick={() => { toggleWishlist(product); setWishlist(getWishlist()); }} aria-label={`Hapus ${product.product_name} dari wishlist`} className="rounded-full p-2 text-red-500 hover:bg-white"><Heart size={16} className="fill-red-500"/></button></div>)}</div>}</motion.aside>}</AnimatePresence>
+
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="fixed top-24 left-4 right-4 md:left-auto md:right-8 md:w-[28rem] z-50 rounded-2xl border border-[#2C1E16]/10 bg-white p-3 shadow-xl">
@@ -225,7 +248,7 @@ export default function App({ products = [] }) {
               <input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' }); setIsSearchOpen(false); } }} placeholder="Cari kopi, kategori, atau rasa..." className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
               {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Hapus pencarian" className="rounded-full p-1 hover:bg-orange-50"><X size={16} /></button>}
             </div>
-            <p className="mt-2 border-t border-[#2C1E16]/10 pt-2 text-xs text-[#2C1E16]/50">{searchQuery ? `${filteredProducts.length} produk ditemukan. Tekan Enter untuk melihat.` : 'Ketik nama produk untuk mencari.'}</p>
+            <div className="mt-4 border-t border-[#2C1E16]/10 pt-4"><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Discovery</p><h2 className="mt-1 font-bold">Belum tahu pilih kopi apa?</h2><p className="mt-1 text-xs text-[#2C1E16]/55">Pilih kategori yang tersimpan pada sistem.</p><div className="mt-3 grid grid-cols-2 gap-2">{categoryFilters.slice(1).map((category) => <button key={category} onClick={() => browseCategory(category)} className="rounded-2xl border border-[#2C1E16]/10 bg-[#FFF5EA] p-3 text-left transition hover:border-[#D4813E] hover:bg-[#FFE9D2]"><span className="block truncate text-sm font-bold">{category}</span><span className="mt-1 block text-[11px] text-[#2C1E16]/55">{products.filter((product) => categoryKey(product.category) === categoryKey(category)).length} produk tersedia</span></button>)}</div></div>{searchQuery && <div className="mt-4 border-t border-[#2C1E16]/10 pt-4"><p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Produk yang cocok</p>{searchResults.length ? <div className="mt-2 space-y-1">{searchResults.map((product) => <Link key={product.product_id} href={route('products.show', product.product_id)} onClick={() => setIsSearchOpen(false)} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-[#FFF5EA]"><img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt="" className="h-10 w-10 rounded-xl object-cover"/><span className="min-w-0"><strong className="block truncate text-sm">{product.product_name}</strong><small className="text-[#2C1E16]/50">{product.category || 'Kopi pilihan'}</small></span></Link>)}</div> : <p className="mt-2 text-xs text-[#2C1E16]/55">Produk tidak ditemukan.</p>}</div>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -262,12 +285,12 @@ export default function App({ products = [] }) {
             </motion.p>
             
             <motion.div variants={slideInLeft} className="flex flex-wrap items-center gap-4">
-              <button className="bg-[#D4813E] text-white px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-[#b86b30] transition-all hover:gap-4 hover:shadow-lg hover:shadow-[#D4813E]/30">
+              <Link href={route('login')} className="bg-[#D4813E] text-white px-8 py-4 rounded-full font-semibold flex items-center gap-2 hover:bg-[#b86b30] transition-all hover:gap-4 hover:shadow-lg hover:shadow-[#D4813E]/30">
                 Pesan Sekarang <ArrowRight size={20} />
-              </button>
-              <button className="bg-transparent border border-[#2C1E16] text-[#2C1E16] px-8 py-4 rounded-full font-semibold hover:bg-[#2C1E16] hover:text-[#FDFBF7] transition-colors">
+              </Link>
+              <a href="#shop" className="bg-transparent border border-[#2C1E16] text-[#2C1E16] px-8 py-4 rounded-full font-semibold hover:bg-[#2C1E16] hover:text-[#FDFBF7] transition-colors">
                 Lihat Produk
-              </button>
+              </a>
             </motion.div>
           </motion.div>
 
@@ -294,7 +317,7 @@ export default function App({ products = [] }) {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={scrollConfig}
+              viewport={{ once: true, amount: 0.1 }}
               variants={slideInRight}
               className="text-center mb-16"
             >
@@ -324,7 +347,7 @@ export default function App({ products = [] }) {
           </div>
         </section>
 
-        {/* SECTION 3: DAFTAR PRODUK (Murni dari Database) */}
+        {/* PART 10.1 — SECTION 3: DAFTAR PRODUK (Murni dari Database) */}
         <section id="shop" className="py-24 px-6 max-w-7xl mx-auto overflow-hidden">
           <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-12 gap-6 text-center md:text-left">
             <motion.div 
@@ -336,6 +359,10 @@ export default function App({ products = [] }) {
               <h2 className="inline-block text-4xl md:text-5xl font-bold mb-3 transition-colors duration-300 hover:text-[#D4813E]">Products</h2>
               <p className="text-[#2C1E16]/60">Temukan biji kopi pilihan langsung dari database kami.</p>
             </motion.div>
+          </div>
+
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2 md:justify-start" aria-label="Filter kategori produk">
+            {categoryFilters.map((category) => <button key={category} onClick={() => browseCategory(category)} className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${(!activeCategory && category === 'Semua') || categoryKey(activeCategory) === categoryKey(category) ? 'bg-[#2C1E16] text-white shadow-md' : 'border border-[#2C1E16]/15 bg-white hover:border-[#D4813E] hover:text-[#D4813E]'}`}>{category}</button>)}
           </div>
 
           {filteredProducts.length === 0 ? (
@@ -350,64 +377,70 @@ export default function App({ products = [] }) {
             </motion.div>
           ) : (
             <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5"
               initial="hidden"
               whileInView="visible"
-              viewport={scrollConfig}
+              viewport={{ once: true, amount: 0.1 }}
               variants={staggerContainer}
             >
-              {filteredProducts.map((item) => (
-                <motion.div 
-                  key={item.product_id} 
-                  variants={slideInRight}
-                  whileHover={{ y: -8 }}
-                  className="group cursor-pointer"
+              {filteredProducts.map((product) => (
+                <motion.article
+                  key={product.product_id}
+                  variants={productCardVariants}
+                  whileHover={{ y: -4 }}
+                  transition={{ type: 'tween', duration: 0.18, ease: 'easeOut' }}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Lihat detail ${product.product_name}`}
+                  onClick={() => router.visit(route('products.show', product.product_id))}
+                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); router.visit(route('products.show', product.product_id)); } }}
+                  className="group flex transform-gpu cursor-pointer flex-col justify-between rounded-3xl border border-[#2C1E16]/5 bg-white p-4 shadow-sm transition-[transform,border-color] duration-200 ease-out hover:-translate-y-1 hover:border-[#D4813E] hover:shadow-xl"
                 >
-                  <div className="relative w-full aspect-square bg-orange-50 rounded-3xl p-6 mb-4 flex items-center justify-center transition-all duration-300 group-hover:shadow-xl overflow-hidden">
-                    <button className="absolute top-4 right-4 text-[#2C1E16]/40 hover:text-red-500 transition-colors bg-white p-2 rounded-full shadow-sm z-20">
-                      <Heart size={16} />
-                    </button>
-                    
-                    <motion.div 
-                      className="w-3/4 h-3/4 bg-transparent flex items-center justify-center overflow-visible rotate-[-5deg] group-hover:rotate-0 transition-all duration-300 z-10"
-                    >
-                       {item.image ? (
-                         <img 
-                            src={`/storage/${item.image}`} 
-                            alt={item.product_name} 
-                            className="w-full h-full object-cover rounded-2xl filter drop-shadow-xl" 
-                         />
-                       ) : (
-                         <ImageIcon size={48} className="text-[#D4813E]/40" />
-                       )}
-                    </motion.div>
+                  <div>
+                    <div className="relative mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-orange-50/50 p-6">
+                      <button
+                        type="button"
+                        onClick={(event) => { event.stopPropagation(); window.location.href = route('login'); }}
+                        aria-label={`Masuk untuk menyukai ${product.product_name}`}
+                        className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-[#2C1E16]/45 shadow-sm transition-colors hover:text-red-500"
+                      >
+                        <Heart size={16} />
+                      </button>
+                      <div className="flex h-3/4 w-3/4 rotate-[-5deg] items-center justify-center overflow-visible bg-transparent transition-transform duration-300 ease-out group-hover:rotate-0">
+                        {product.image ? (
+                          <img src={`/storage/${product.image}`} alt={product.product_name} className="h-full w-full object-contain drop-shadow-xl" />
+                        ) : (
+                          <ImageIcon size={48} className="text-[#D4813E]/40" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-1">
+                      <div className="mb-2 flex items-center gap-1">
+                        <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
+                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(product.reviews_avg_rating || 0).toFixed(1)} / 5 ({product.reviews_count ?? 0})</span>
+                      </div>
+                      <h3 className="mb-1 truncate text-lg font-bold transition-colors group-hover:text-[#D4813E]">{product.product_name}</h3>
+                      <p className="mb-2 min-h-[2rem] line-clamp-2 text-xs text-[#2C1E16]/60">{product.description || '-'}</p>
+                      {product.category && <div className="mb-2 inline-flex rounded-full bg-[#FFE9D2] px-2 py-0.5 text-[10px] font-bold text-[#D4813E]">{product.category}</div>}
+                    </div>
                   </div>
 
-                  <div className="px-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1">
-                        <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
-                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(item.reviews_avg_rating || 0).toFixed(1)} / 5 ({item.reviews_count ?? 0})</span>
-                      </div>
-                      <span className="text-[11px] font-medium px-2 py-0.5 bg-orange-100 text-[#D4813E] rounded-full">
-                        Stok: {item.stock}
-                      </span>
+                  <div className="mt-2 flex items-center justify-between border-t border-[#2C1E16]/5 px-1 pt-3">
+                    <div>
+                      <span className="text-xl font-bold">Rp {Number(product.price).toLocaleString('id-ID')}</span>
+                      <div className="mt-0.5 text-xs text-[#2C1E16]/50">Stok: {product.stock}</div>
                     </div>
-                    
-                    <h3 className="font-bold text-lg mb-1 truncate group-hover:text-[#D4813E] transition-colors">{item.product_name}</h3>
-                    <p className="text-xs text-[#2C1E16]/60 mb-2 line-clamp-2 min-h-[2rem]">{item.description || '-'}</p>
-                    
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#2C1E16]/5">
-                      <div>
-                        <span className="font-bold text-lg">Rp {Number(item.price).toLocaleString('id-ID')}</span>
-                        <div className="text-[10px] text-[#2C1E16]/40 font-mono">ID: #{item.product_id}</div>
-                      </div>
-                      <Link href={auth && auth.user ? route('cart.store', item.product_id) : route('login')} method={auth && auth.user ? 'post' : 'get'} as="button" className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/20 hover:scale-110">
-                        <ShoppingBag size={16} />
-                      </Link>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); router.visit(route('products.show', product.product_id)); }}
+                      aria-label={`Lihat detail ${product.product_name}`}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/25 transition-colors group-hover:bg-[#2C1E16]"
+                    >
+                      <ShoppingBag size={16} />
+                    </button>
                   </div>
-                </motion.div>
+                </motion.article>
               ))}
             </motion.div>
           )}
@@ -450,12 +483,12 @@ export default function App({ products = [] }) {
               <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
                 <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Espresso Roast</h3>
                 <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p>
-                <motion.button 
-                  animate={{ opacity: hoveredCategory === 'espresso' ? 1 : 0.5 }}
+                <Link
+                  href={route('collections.espresso')}
                   className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
                 >
                   Lihat Koleksi
-                </motion.button>
+                </Link>
               </div>
             </motion.div>
 
@@ -476,12 +509,12 @@ export default function App({ products = [] }) {
               <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
                 <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Filter Roast</h3>
                 <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p>
-                <motion.button 
-                  animate={{ opacity: hoveredCategory === 'filter' ? 1 : 0.5 }}
+                <Link
+                  href={route('collections.filter')}
                   className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
                 >
                   Lihat Koleksi
-                </motion.button>
+                </Link>
               </div>
             </motion.div>
           </motion.div>

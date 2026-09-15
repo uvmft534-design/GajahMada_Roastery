@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\PaymentSetting;
 use App\Models\PaymentSettingChangeRequest;
 use App\Models\RoleChangeLog;
+use App\Models\StaffAccess;
 use App\Models\User;
+use App\Models\Order;
+use App\Services\RevenueAnalyticsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +17,20 @@ use Inertia\Response;
 
 class SuperAdminController extends Controller
 {
-    public function dashboard(): Response
+    public function dashboard(RevenueAnalyticsService $revenueAnalytics): Response
     {
+        $roleDistribution = User::query()->selectRaw('role, COUNT(*) as count')->groupBy('role')->pluck('count', 'role');
+        $orderStatusDistribution = Order::query()->selectRaw('status, COUNT(*) as count')->groupBy('status')->pluck('count', 'status');
+
         return Inertia::render('SuperAdmin/Dashboard', [
             'userCount' => User::count(),
+            'staffOverview' => [
+                'active' => StaffAccess::query()->where('status', 'active')->count(),
+                'pending' => StaffAccess::query()->where('status', 'pending')->count(),
+            ],
+            'revenueAnalytics' => $revenueAnalytics->dashboardAnalytics(),
+            'roleDistribution' => $roleDistribution,
+            'orderStatusDistribution' => $orderStatusDistribution,
         ]);
     }
 
@@ -32,7 +45,48 @@ class SuperAdminController extends Controller
                     ->orWhere('email', 'like', "%{$search}%")))
                 ->latest()->get(['id', 'name', 'email', 'role', 'google_id', 'created_at']),
             'filters' => ['search' => $search],
+            'staffAccesses' => StaffAccess::query()->with(['creator:id,name', 'activatedUser:id,name'])->latest()->get(),
         ]);
+    }
+
+    public function storeStaffAccess(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'role' => ['required', 'in:admin,courier'],
+        ]);
+        $email = mb_strtolower(trim($data['email']));
+
+        abort_if(User::query()->whereRaw('LOWER(email) = ?', [$email])->where('role', 'super_admin')->exists(), 422, 'Email Super Admin tidak dapat didaftarkan sebagai akses staf.');
+
+        DB::transaction(function () use ($request, $data, $email): void {
+            $access = StaffAccess::query()->where('email', $email)->lockForUpdate()->first();
+            abort_if($access?->status === 'active', 422, 'Akses staf ini sudah aktif. Cabut akses sebelumnya sebelum membuat akses baru.');
+
+            if ($access) {
+                $access->update(['role' => $data['role'], 'status' => 'pending', 'created_by' => $request->user()->id, 'activated_user_id' => null, 'activated_at' => null]);
+                return;
+            }
+
+            StaffAccess::create(['email' => $email, 'role' => $data['role'], 'status' => 'pending', 'created_by' => $request->user()->id]);
+        });
+
+        return back()->with('success', 'Akses staf disimpan. Pemilik email harus masuk dengan Google untuk mengaktifkannya.');
+    }
+
+    public function revokeStaffAccess(Request $request, StaffAccess $staffAccess): RedirectResponse
+    {
+        DB::transaction(function () use ($request, $staffAccess): void {
+            $access = StaffAccess::lockForUpdate()->findOrFail($staffAccess->id);
+            if ($access->status === 'active' && $access->activatedUser && $access->activatedUser->role === $access->role) {
+                $user = $access->activatedUser;
+                $user->update(['role' => 'customer']);
+                RoleChangeLog::create(['target_user_id' => $user->id, 'changed_by' => $request->user()->id, 'old_role' => $access->role, 'new_role' => 'customer']);
+            }
+            $access->update(['status' => 'revoked']);
+        });
+
+        return back()->with('success', 'Akses staf dicabut.');
     }
 
     public function updateRole(Request $request, User $user): RedirectResponse

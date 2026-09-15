@@ -1,9 +1,9 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ProfileLayout from '@/Layouts/ProfileLayout';
 import { Head, useForm } from '@inertiajs/react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
-import { Coffee, Settings, ShieldCheck, Trash2 } from 'lucide-react';
+import { Settings, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 
 function GooglePasswordSetup() {
     const { post, processing, recentlySuccessful, errors } = useForm({});
@@ -26,7 +26,7 @@ function GooglePasswordSetup() {
 
 export default function Edit({ mustVerifyEmail, status, googleLinked }) {
     return (
-        <AuthenticatedLayout
+        <ProfileLayout
             header={
                 <h2 className="text-xl font-bold leading-tight text-[#2C1E16]">Profil Saya</h2>
             }
@@ -38,7 +38,7 @@ export default function Edit({ mustVerifyEmail, status, googleLinked }) {
                     <div className="relative overflow-hidden rounded-[2rem] bg-[#2C1E16] p-7 text-white shadow-xl sm:p-10">
                         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#D4813E]/20" />
                         <div className="relative flex items-start gap-4">
-                            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#D4813E] shadow-lg shadow-black/20"><Coffee size={26} /></div>
+                            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#D4813E] shadow-lg shadow-black/20"><UserRound size={26} /></div>
                             <div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#D4813E]">Akun Kopi Gajahmada</p><h1 className="mt-1 text-3xl font-bold">Kelola profil Anda</h1><p className="mt-2 max-w-xl text-sm leading-relaxed text-white/65">Perbarui data akun dan pengaturan keamanan Anda dalam satu tempat.</p></div>
                         </div>
                     </div>
@@ -63,6 +63,6 @@ export default function Edit({ mustVerifyEmail, status, googleLinked }) {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </ProfileLayout>
     );
 }

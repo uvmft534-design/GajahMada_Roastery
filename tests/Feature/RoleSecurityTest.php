@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\StaffAccess;
 use App\Models\User;
 use App\Services\GoogleAccountLinker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -126,6 +127,17 @@ class RoleSecurityTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         $linker->link('other@example.com', 'google-id', 'Other User');
+    }
+
+    public function test_google_login_activates_a_pre_registered_staff_email(): void
+    {
+        $superAdmin = User::factory()->create(['role' => 'super_admin']);
+        StaffAccess::create(['email' => 'staff@example.com', 'role' => 'admin', 'status' => 'pending', 'created_by' => $superAdmin->id]);
+
+        $user = app(GoogleAccountLinker::class)->link(' STAFF@example.com ', 'google-staff', 'Staff Member');
+
+        $this->assertSame('admin', $user->fresh()->role);
+        $this->assertDatabaseHas('staff_accesses', ['email' => 'staff@example.com', 'role' => 'admin', 'status' => 'active', 'activated_user_id' => $user->id]);
     }
 
     public function test_customer_can_open_own_order(): void

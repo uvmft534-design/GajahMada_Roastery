@@ -54,10 +54,11 @@ class ReportExportService
         $period = $report->period_start ? $report->period_start->format('d M Y').' – '.$report->period_end->format('d M Y') : 'Snapshot persediaan';
 
         return match ($report->type) {
-            'sales' => ['title' => 'Laporan Penjualan', 'period' => $period, 'summary' => ['Total Pesanan Dibayar' => $data['total_orders'] ?? 0, 'Total Produk Terjual' => $data['total_items_sold'] ?? 0, 'Total Pendapatan' => $money($data['total_revenue'] ?? 0), 'Rata-rata Nilai Pesanan' => $money($data['average_order_value'] ?? 0)], 'headers' => ['Produk', 'Jumlah Terjual', 'Total Penjualan'], 'rows' => collect($data['products'] ?? [])->map(fn ($p) => [$p['product_name'], $p['quantity'], $money($p['total'])])->all()],
+            'sales' => ['title' => 'Laporan Penjualan', 'period' => $period, 'summary' => ['Total Pesanan Dibayar' => $data['total_orders'] ?? 0, 'Jenis Produk Terjual' => $data['total_product_types_sold'] ?? 0, 'Total Unit Terjual' => $data['total_items_sold'] ?? 0, 'Total Pendapatan' => $money($data['total_revenue'] ?? 0), 'Rata-rata Nilai Pesanan' => $money($data['average_order_value'] ?? 0)], 'headers' => ['Produk', 'Kuantitas (unit)', 'Total Penjualan'], 'rows' => collect($data['products'] ?? [])->map(fn ($p) => [$p['product_name'], $p['quantity'], $money($p['total'])])->all()],
             'orders' => ['title' => 'Laporan Pesanan', 'period' => $period, 'summary' => ['Total Pesanan' => $data['total_orders'] ?? 0], 'headers' => ['Status', 'Jumlah'], 'rows' => $this->statusRows($data['statuses'] ?? [])],
             'payments' => ['title' => 'Laporan Pembayaran', 'period' => $period, 'summary' => ['Belum Dibayar' => $data['unpaid_count'] ?? 0, 'Menunggu Konfirmasi' => $data['pending_confirmation_count'] ?? 0, 'Dibayar' => $data['paid_count'] ?? 0, 'Ditolak' => $data['rejected_count'] ?? 0, 'Total Pembayaran Berhasil' => $money($data['total_paid_amount'] ?? 0)], 'headers' => [], 'rows' => []],
             'deliveries' => ['title' => 'Laporan Pengiriman', 'period' => $period, 'summary' => ['Total Request Pickup' => $data['pickup_requested'] ?? 0, 'Total Dijemput' => $data['picked_up'] ?? 0, 'Total Dalam Pengiriman' => $data['shipped'] ?? 0, 'Total Sampai' => $data['delivered'] ?? 0, 'Total Selesai' => $data['completed_deliveries'] ?? 0, 'Kurir Ditugaskan' => $data['assigned_couriers_count'] ?? 0], 'headers' => [], 'rows' => []],
+            'complaints' => ['title' => 'Laporan Komplain', 'period' => $period, 'summary' => ['Total Komplain' => $data['total_complaints'] ?? 0, 'Baru Masuk' => $data['submitted'] ?? 0, 'Sedang Ditinjau' => $data['in_review'] ?? 0, 'Selesai' => $data['resolved'] ?? 0, 'Ditolak' => $data['rejected'] ?? 0], 'headers' => ['Pesanan', 'Pelanggan', 'Produk/Topik', 'Kategori', 'Status', 'Diajukan'], 'rows' => collect($data['complaints'] ?? [])->map(fn ($c) => [$c['order_number'], $c['customer_name'], $c['product_name'], $c['category'] === 'product' ? 'Produk' : 'Pengiriman', $this->complaintStatus($c['status']), $c['submitted_at']])->all()],
             default => ['title' => 'Laporan Persediaan', 'period' => $period, 'summary' => ['Total Produk' => $data['total_products'] ?? 0, 'Total Unit Stock' => $data['total_stock_units'] ?? 0, 'Stock Menipis' => $data['low_stock_products'] ?? 0, 'Stock Habis' => $data['out_of_stock_products'] ?? 0], 'headers' => ['Produk', 'Stock'], 'rows' => collect($data['products'] ?? [])->map(fn ($p) => [$p['product_name'], $p['current_stock']])->all()],
         };
     }
@@ -67,5 +68,10 @@ class ReportExportService
         $labels = ['awaiting_payment' => 'Menunggu Pembayaran', 'processing' => 'Diproses', 'packed' => 'Sudah Dikemas', 'pickup_requested' => 'Menunggu Pickup', 'picked_up' => 'Dijemput Kurir', 'shipped' => 'Dalam Pengiriman', 'delivered' => 'Sampai Tujuan', 'completed' => 'Selesai', 'cancelled' => 'Dibatalkan'];
 
         return collect($labels)->map(fn ($label, $status) => [$label, $statuses[$status] ?? 0])->values()->all();
+    }
+
+    private function complaintStatus(string $status): string
+    {
+        return ['submitted' => 'Baru Masuk', 'in_review' => 'Sedang Ditinjau', 'resolved' => 'Selesai', 'rejected' => 'Ditolak'][$status] ?? $status;
     }
 }

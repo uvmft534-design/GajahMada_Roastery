@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ShoppingBag, User, ArrowRight, Star, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
 import { Link, usePage, router } from '@inertiajs/react';
+import { getWishlist, toggleWishlist } from '../utils/wishlist';
 
 const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
 
@@ -28,20 +29,20 @@ const POLICIES = [
 ];
 
 const slideInLeft = {
-  hidden: { opacity: 0, x: -80 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+  hidden: { opacity: 0, x: -36 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
 };
 
 const slideInRight = {
-  hidden: { opacity: 0, x: 80 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+  hidden: { opacity: 0, x: 36 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
 };
 
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 }
   }
 };
 
@@ -49,17 +50,20 @@ const staggerContainerSlow = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.25, delayChildren: 0.2 }
+    transition: { staggerChildren: 0.12, delayChildren: 0.08 }
   }
 };
 
 export default function Dashboard() {
-  const { auth, products = [], cartItemCount = 0 } = usePage().props;
+  const { auth, products = [], categories = [], selectedCategory = null, cartItemCount = 0 } = usePage().props;
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState(selectedCategory);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -74,8 +78,19 @@ export default function Dashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownRef]);
 
+  useEffect(() => {
+    const refresh = () => setWishlist(getWishlist());
+    refresh();
+    window.addEventListener('wishlist:changed', refresh);
+    return () => window.removeEventListener('wishlist:changed', refresh);
+  }, []);
+
   const scrollConfig = { once: false, amount: 0.2, margin: "0px 0px -100px 0px" };
-  const filteredProducts = products.filter((product) => [product.product_name, product.category, product.description].filter(Boolean).some((value) => value.toLowerCase().includes(searchQuery.toLowerCase())));
+  const categoryKey = (category) => String(category || '').trim().toLocaleLowerCase('id-ID');
+  const categoryFilters = ['Semua', ...categories.map((category) => String(category).trim()).filter(Boolean)];
+  const filteredProducts = products.filter((product) => [product.product_name, product.category, product.description].filter(Boolean).some((value) => String(value).toLowerCase().includes(searchQuery.toLowerCase())));
+  const searchResults = products.filter((product) => [product.product_name, product.category, product.description].filter(Boolean).some((value) => value.toLowerCase().includes(searchQuery.toLowerCase()))).slice(0, 4);
+  const chooseCategory = (category) => { const selected = category === 'Semua' ? null : category; setActiveCategory(selected); setSearchQuery(''); setIsSearchOpen(false); router.get(route('dashboard'), selected ? { category: selected } : {}, { preserveScroll: true }); };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C1E16] font-sans overflow-x-hidden">
@@ -106,6 +121,7 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-5">
             <button onClick={() => setIsSearchOpen((open) => !open)} aria-label="Cari produk" aria-expanded={isSearchOpen} className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
+            <button onClick={() => setIsWishlistOpen((open) => !open)} aria-label="Wishlist" aria-expanded={isWishlistOpen} className="relative hover:text-[#D4813E] transition-transform hover:scale-110"><Heart size={20} className={wishlist.length ? 'fill-[#D4813E]/20' : ''} />{wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{wishlist.length}</span>}</button>
             
             <Link
               href={auth && auth.user ? route('cart.index') : route('login')}
@@ -207,7 +223,9 @@ export default function Dashboard() {
         </AnimatePresence>
       </motion.nav>
 
-      <AnimatePresence>{isSearchOpen && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="fixed top-24 left-4 right-4 md:left-auto md:right-8 md:w-[28rem] z-50 rounded-2xl border border-[#2C1E16]/10 bg-white p-3 shadow-xl"><div className="flex items-center gap-2"><Search size={18} className="text-[#D4813E]" /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' }); setIsSearchOpen(false); } }} placeholder="Cari kopi, kategori, atau rasa..." className="min-w-0 flex-1 bg-transparent text-sm outline-none" />{searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Hapus pencarian" className="rounded-full p-1 hover:bg-orange-50"><X size={16} /></button>}</div><p className="mt-2 border-t border-[#2C1E16]/10 pt-2 text-xs text-[#2C1E16]/50">{searchQuery ? `${filteredProducts.length} produk ditemukan. Tekan Enter untuk melihat.` : 'Ketik nama produk untuk mencari.'}</p></motion.div>}</AnimatePresence>
+      <AnimatePresence>{isWishlistOpen && <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ duration: 0.22 }} className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-[#2C1E16]/10 bg-white p-4 shadow-2xl"><div className="flex items-center justify-between border-b border-[#2C1E16]/10 pb-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Pilihan Anda</p><h2 className="font-bold">Wishlist</h2></div><button onClick={() => setIsWishlistOpen(false)} className="rounded-full p-2 hover:bg-orange-50"><X size={17} /></button></div>{wishlist.length === 0 ? <p className="py-8 text-center text-sm text-[#2C1E16]/60">Belum ada produk yang disukai.</p> : <div className="mt-3 max-h-[60vh] space-y-2 overflow-auto">{wishlist.map((product) => <div key={product.product_id} className="group flex items-center gap-3 rounded-2xl p-2 hover:bg-[#FFE9D2]/40"><Link href={route('products.show', product.product_id)} onClick={() => setIsWishlistOpen(false)} className="flex min-w-0 flex-1 items-center gap-3"><img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt="" className="h-12 w-12 rounded-xl object-cover" /><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{product.product_name}</strong><small className="text-[#D4813E]">Rp {Number(product.price).toLocaleString('id-ID')}</small></span></Link><button onClick={() => { toggleWishlist(product); setWishlist(getWishlist()); }} aria-label={`Hapus ${product.product_name} dari wishlist`} className="rounded-full p-2 text-[#2C1E16]/40 transition hover:bg-white hover:text-red-500"><Heart size={16} className="fill-red-500 text-red-500" /></button></div>)}</div>}</motion.aside>}</AnimatePresence>
+
+      <AnimatePresence>{isSearchOpen && <motion.div initial={{ opacity: 0, y: -10, scale: .98 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="fixed top-24 left-4 right-4 z-50 rounded-3xl border border-[#2C1E16]/10 bg-white p-4 shadow-2xl md:left-auto md:right-8 md:w-[30rem]"><div className="flex items-center gap-2"><Search size={18} className="text-[#D4813E]" /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Cari nama kopi, rasa, atau kategori..." className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none" />{searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Hapus pencarian" className="rounded-full p-1 hover:bg-orange-50"><X size={16} /></button>}</div><div className="mt-4 border-t border-[#2C1E16]/10 pt-4"><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Discovery dari kategori sistem</p><h2 className="mt-1 font-bold">Belum tahu pilih kopi apa?</h2><div className="mt-3 grid grid-cols-2 gap-2">{categoryFilters.slice(1).map((category) => <button key={category} onClick={() => chooseCategory(category)} className="rounded-2xl border border-[#2C1E16]/10 bg-[#FFF5EA] p-3 text-left transition hover:border-[#D4813E] hover:bg-[#FFE9D2]"><span className="block truncate text-sm font-bold">{category}</span><span className="mt-1 block text-[11px] text-[#2C1E16]/55">{products.filter((product) => categoryKey(product.category) === categoryKey(category)).length} produk tersedia</span></button>)}</div></div></motion.div>}</AnimatePresence>
 
       <main className="pt-20">
         
@@ -308,9 +326,10 @@ export default function Dashboard() {
               ))}
             </motion.div>
           </div>
+
         </section>
 
-        {/* SECTION 3: DAFTAR PRODUK */}
+        {/* PART 10.1 — SECTION 3: DAFTAR PRODUK */}
         <section id="shop" className="py-24 px-6 max-w-7xl mx-auto overflow-hidden">
           <div className="flex flex-col md:flex-row justify-between items-center md:items-end mb-12 gap-6 text-center md:text-left">
             <motion.div 
@@ -339,32 +358,31 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2 md:justify-start" aria-label="Filter kategori produk">
+            {categoryFilters.map((category) => <button key={category} onClick={() => chooseCategory(category)} className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${(!activeCategory && category === 'Semua') || categoryKey(activeCategory) === categoryKey(category) ? 'bg-[#2C1E16] text-white shadow-md' : 'border border-[#2C1E16]/15 bg-white hover:border-[#D4813E] hover:text-[#D4813E]'}`}>{category}</button>)}
+          </div>
+
           {filteredProducts.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-3xl border border-[#2C1E16]/10">
               <p className="text-[#2C1E16]/60 text-base font-medium">{searchQuery ? 'Produk tidak ditemukan. Coba kata kunci lain.' : 'Belum ada produk yang ditambahkan di admin dashboard.'}</p>
             </div>
           ) : (
             <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-              initial="hidden"
-              whileInView="visible"
-              viewport={scrollConfig}
-              variants={staggerContainer}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5"
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
             >
               {filteredProducts.map((product) => (
                 <Link
                   key={product.product_id}
-                  href={`/products/${product.product_id}`}
-                  className="group bg-white rounded-3xl p-4 border border-[#2C1E16]/5 hover:border-[#D4813E] transition-all flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-2 duration-300 cursor-pointer"
+                  href={route('products.show', product.product_id)}
+                  className="group flex transform-gpu flex-col justify-between rounded-3xl border border-[#2C1E16]/5 bg-white p-4 shadow-sm transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-1 hover:border-[#D4813E] hover:shadow-xl cursor-pointer"
                 >
                   <div>
                     <div className="relative w-full aspect-square bg-orange-50/50 rounded-2xl p-6 mb-4 flex items-center justify-center overflow-hidden">
-                      {product.category && (
-                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-xs font-bold px-3 py-1 rounded-full text-[#2C1E16] shadow-sm">
-                          {product.category}
-                        </div>
-                      )}
-
+                      <button onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleWishlist(product); setWishlist(getWishlist()); }} aria-label={`Sukai ${product.product_name}`} className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-[#2C1E16]/45 shadow-sm transition-colors hover:text-red-500"><Heart size={16} className={wishlist.some((item) => item.product_id === product.product_id) ? 'fill-red-500 text-red-500' : ''} /></button>
                       <div className="w-3/4 h-3/4 bg-transparent flex items-center justify-center overflow-visible rotate-[-5deg] group-hover:rotate-0 transition-all duration-300">
                          <img 
                             src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} 
@@ -382,6 +400,7 @@ export default function Dashboard() {
                       
                       <h3 className="font-bold text-lg mb-1 truncate group-hover:text-[#D4813E] transition-colors">{product.product_name}</h3>
                       <p className="text-xs text-[#2C1E16]/60 mb-2 line-clamp-2 min-h-[2rem]">{product.description}</p>
+                      {product.category && <div className="mb-2 inline-flex rounded-full bg-[#FFE9D2] px-2 py-0.5 text-[10px] font-bold text-[#D4813E]">{product.category}</div>}
                     </div>
                   </div>
 
@@ -393,15 +412,12 @@ export default function Dashboard() {
                       <div className="text-xs text-[#2C1E16]/50 mt-0.5">Stok: {product.stock}</div>
                     </div>
                     
-                    <Link
-                      href={auth && auth.user ? route('cart.store', product.product_id) : route('login')}
-                      method={auth && auth.user ? 'post' : 'get'}
-                      as="button"
-                      aria-label={`Tambah ${product.product_name} ke keranjang`}
+                    <span
+                      aria-label={`Lihat detail ${product.product_name}`}
                       className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white group-hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/25"
                     >
                       <ShoppingBag size={16} />
-                    </Link>
+                    </span>
                   </div>
                 </Link>
               ))}
@@ -409,76 +425,18 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* SECTION 4: KATEGORI KOPI */}
+        {/* SECTION 4: GAYA SEDUH */}
         <section className="py-24 px-6 max-w-7xl mx-auto overflow-hidden">
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={scrollConfig}
-            variants={slideInLeft}
-            className="text-center mb-12"
-          >
+          <motion.div initial="hidden" whileInView="visible" viewport={scrollConfig} variants={slideInLeft} className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">Pilih Gaya Seduhmu</h2>
             <p className="text-[#2C1E16]/60">Koleksi kami dirancang khusus untuk memenuhi preferensi brewing Anda.</p>
           </motion.div>
-
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={scrollConfig}
-            variants={slideInRight}
-            className="flex flex-col md:flex-row h-[500px] gap-4 w-full"
-          >
-            <motion.div
-              onMouseEnter={() => setHoveredCategory('espresso')}
-              onMouseLeave={() => setHoveredCategory(null)}
-              animate={{ 
-                flex: hoveredCategory === 'espresso' ? 2 : hoveredCategory === 'filter' ? 0.8 : 1 
-              }}
-              className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-300"
-            >
-              <div className="absolute inset-0 bg-[#2C1E16]/40 z-10 group-hover:bg-[#2C1E16]/20 transition-colors duration-500"></div>
-              <img 
-                src="/images/category-espresso.jpg" 
-                alt="Kategori Espresso" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Espresso Roast</h3>
-                <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p>
-                <motion.button 
-                  animate={{ opacity: hoveredCategory === 'espresso' ? 1 : 0.5 }}
-                  className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
-                >
-                  Lihat Koleksi
-                </motion.button>
-              </div>
+          <motion.div initial="hidden" whileInView="visible" viewport={scrollConfig} variants={slideInRight} className="flex flex-col md:flex-row h-[500px] gap-4 w-full">
+            <motion.div onMouseEnter={() => setHoveredCategory('espresso')} onMouseLeave={() => setHoveredCategory(null)} animate={{ flex: hoveredCategory === 'espresso' ? 2 : hoveredCategory === 'filter' ? 0.8 : 1 }} className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-300">
+              <div className="absolute inset-0 bg-[#2C1E16]/40 z-10 group-hover:bg-[#2C1E16]/20 transition-colors duration-500"></div><img src="/images/category-espresso.jpg" alt="Kategori Espresso" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent"><h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Espresso Roast</h3><p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p><Link href={route('collections.espresso')} className="mt-4 inline-flex bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors">Lihat Koleksi</Link></div>
             </motion.div>
-
-            <motion.div
-              onMouseEnter={() => setHoveredCategory('filter')}
-              onMouseLeave={() => setHoveredCategory(null)}
-              animate={{ 
-                flex: hoveredCategory === 'filter' ? 2 : hoveredCategory === 'espresso' ? 0.8 : 1 
-              }}
-              className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-200"
-            >
-              <div className="absolute inset-0 bg-[#D4813E]/40 z-10 group-hover:bg-[#D4813E]/20 transition-colors duration-500"></div>
-              <img 
-                src="/images/category-filter.jpg" 
-                alt="Kategori Filter" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Filter Roast</h3>
-                <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p>
-                <motion.button 
-                  animate={{ opacity: hoveredCategory === 'filter' ? 1 : 0.5 }}
-                  className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
-                >
-                  Lihat Koleksi
-                </motion.button>
-              </div>
+            <motion.div onMouseEnter={() => setHoveredCategory('filter')} onMouseLeave={() => setHoveredCategory(null)} animate={{ flex: hoveredCategory === 'filter' ? 2 : hoveredCategory === 'espresso' ? 0.8 : 1 }} className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-200">
+              <div className="absolute inset-0 bg-[#D4813E]/40 z-10 group-hover:bg-[#D4813E]/20 transition-colors duration-500"></div><img src="/images/category-filter.jpg" alt="Kategori Filter" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent"><h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Filter Roast</h3><p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p><Link href={route('collections.filter')} className="mt-4 inline-flex bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors">Lihat Koleksi</Link></div>
             </motion.div>
           </motion.div>
         </section>

@@ -8,7 +8,6 @@ import {
   EyeOff, 
   ArrowLeft, 
   Coffee, 
-  Sparkles 
 } from 'lucide-react';
 
 export default function Login({ status, canResetPassword }) {
@@ -56,9 +55,6 @@ export default function Login({ status, canResetPassword }) {
               transition={{ duration: 0.8 }}
               className="relative z-10 my-auto py-8"
             >
-              <div className="inline-flex items-center gap-2 bg-[#D4813E]/20 border border-[#D4813E]/40 px-3 py-1 rounded-full text-xs font-semibold text-[#D4813E] mb-6">
-                <Sparkles size={14} /> Welcome Back! ☕️
-              </div>
               <h2 className="text-3xl font-bold leading-tight mb-4">
                 Siap Menikmati Cangkir Kopi Hari Ini?
               </h2>

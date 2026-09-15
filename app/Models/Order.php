@@ -42,6 +42,7 @@ class Order extends Model
         'picked_up_at',
         'shipped_at',
         'delivered_at',
+        'admin_seen_at',
     ];
 
     public function user(): BelongsTo
@@ -69,6 +70,11 @@ class Order extends Model
         return $this->hasMany(ProductReview::class, 'order_id', 'order_id');
     }
 
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'order_id', 'order_id');
+    }
+
     protected function casts(): array
     {
         return [
@@ -77,6 +83,7 @@ class Order extends Model
             'picked_up_at' => 'datetime',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'admin_seen_at' => 'datetime',
         ];
     }
 

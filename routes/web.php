@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductCategoryController;
+use App\Http\Controllers\Admin\ComplaintController as AdminComplaintController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentSettingController;
@@ -16,6 +19,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/products/{id}', [HomeController::class, 'show'])->name('products.show');
+Route::get('/collections/espresso', [HomeController::class, 'espressoCollection'])->name('collections.espresso');
+Route::get('/collections/filter', [HomeController::class, 'filterCollection'])->name('collections.filter');
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
@@ -38,6 +43,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::post('/orders/{order}/complete', [OrderController::class, 'complete'])->name('orders.complete');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('/orders/{order}/proof', [OrderController::class, 'uploadProof'])->name('orders.proof');
+    Route::post('/orders/{order}/complaints', [ComplaintController::class, 'store'])->name('orders.complaints.store');
     Route::post('/orders/{order}/items/{orderItem}/review', [ProductReviewController::class, 'store'])->name('orders.items.review.store');
 
     Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
@@ -50,6 +56,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/orders/{order}/payment-proof', [OrderController::class, 'viewPaymentProof'])->name('orders.proof.view');
+    Route::get('/complaints/{complaint}/evidence/{evidence}', [ComplaintController::class, 'evidence'])->name('complaints.evidence');
+    Route::get('/complaints/{complaint}', [ComplaintController::class, 'show'])->name('complaints.show');
+    Route::post('/complaints/{complaint}/replies', [ComplaintController::class, 'reply'])->name('complaints.replies.store');
 });
 
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(function () {
@@ -62,9 +71,14 @@ Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(functio
     Route::post('/admin/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('admin.orders.cancel');
     Route::post('/admin/orders/{order}/approve-payment', [OrderController::class, 'approvePayment'])->name('admin.orders.approvePayment');
     Route::post('/admin/orders/{order}/reject-payment', [OrderController::class, 'rejectPayment'])->name('admin.orders.rejectPayment');
+    Route::get('/admin/complaints', [AdminComplaintController::class, 'index'])->name('admin.complaints.index');
+    Route::patch('/admin/complaints/{complaint}', [AdminComplaintController::class, 'update'])->name('admin.complaints.update');
     Route::post('/admin/products', [ProductController::class, 'store'])->name('admin.products.store');
     Route::post('/admin/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/admin/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
+    Route::post('/admin/product-categories', [ProductCategoryController::class, 'store'])->name('admin.product-categories.store');
+    Route::put('/admin/product-categories/{category}', [ProductCategoryController::class, 'update'])->name('admin.product-categories.update');
+    Route::delete('/admin/product-categories/{category}', [ProductCategoryController::class, 'destroy'])->name('admin.product-categories.destroy');
 });
 
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->get('/admin/payment-settings', [PaymentSettingController::class, 'index'])->name('admin.payment-settings.index');
@@ -93,6 +107,8 @@ Route::middleware(['auth', 'verified', 'role:courier'])->group(function () {
 Route::middleware(['auth', 'verified', 'role:super_admin'])->prefix('super-admin')->name('super-admin.')->group(function () {
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [SuperAdminController::class, 'users'])->name('users.index');
+    Route::post('/staff-accesses', [SuperAdminController::class, 'storeStaffAccess'])->name('staff-accesses.store');
+    Route::delete('/staff-accesses/{staffAccess}', [SuperAdminController::class, 'revokeStaffAccess'])->name('staff-accesses.destroy');
     Route::patch('/users/{user}/role', [SuperAdminController::class, 'updateRole'])->name('users.role.update');
     Route::get('/payment-settings', [SuperAdminController::class, 'paymentSettings'])->name('payment-settings.index');
     Route::post('/payment-settings', [SuperAdminController::class, 'createInitialPaymentSetting'])->name('payment-settings.store');

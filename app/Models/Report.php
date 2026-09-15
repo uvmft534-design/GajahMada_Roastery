@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Report extends Model
 {
-    public const TYPES = ['sales', 'orders', 'payments', 'deliveries', 'inventory'];
+    public const TYPES = ['sales', 'orders', 'payments', 'deliveries', 'inventory', 'complaints'];
 
     public const STATUSES = ['generated', 'reviewed'];
 

@@ -183,7 +183,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $this->authorize('view', $order);
-        $order->load('items.product', 'items.review', 'user', 'courier');
+        $order->load('items.product', 'items.review', 'user', 'courier', 'complaints.item', 'complaints.evidences');
 
         return Inertia::render('OrderDetail', [
             'order' => $order,
@@ -245,6 +245,8 @@ class OrderController extends Controller
 
     public function adminOrders(Request $request)
     {
+        Order::query()->whereNull('admin_seen_at')->update(['admin_seen_at' => now()]);
+
         $filters = $request->validate([
             'search' => 'nullable|string|max:255',
             'status' => 'nullable|string',
