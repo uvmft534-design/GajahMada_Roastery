@@ -48,6 +48,27 @@ class CourierFulfillmentTest extends TestCase
         $this->assertNotNull($assigned->fresh()->picked_up_at);
     }
 
+    public function test_courier_dashboard_receives_order_destination_instead_of_the_customers_profile_address(): void
+    {
+        $courier = User::factory()->create(['role' => 'courier']);
+        $customer = User::factory()->create(['role' => 'customer', 'address' => 'Jl. Profil No. 1, Medan']);
+        $order = Order::factory()->create([
+            'courier_id' => $courier->id,
+            'user_id' => $customer->id,
+            'customer_address' => 'Jl. Tujuan Pesanan No. 8, Medan',
+            'destination_latitude' => 3.589665,
+            'destination_longitude' => 98.673826,
+        ]);
+
+        $this->actingAs($courier)->get(route('courier.dashboard'))
+            ->assertInertia(fn ($page) => $page
+                ->component('Courier/Dashboard')
+                ->where('orders.0.order_id', $order->order_id)
+                ->where('orders.0.customer_address', 'Jl. Tujuan Pesanan No. 8, Medan')
+                ->where('orders.0.destination_latitude', 3.589665)
+                ->where('orders.0.destination_longitude', 98.673826));
+    }
+
     public function test_courier_tracking_and_delivery_transitions_are_enforced(): void
     {
         $courier = User::factory()->create(['role' => 'courier']);

@@ -53,6 +53,24 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_current_location_checkout_keeps_coordinates_when_delivery_details_are_added(): void
+    {
+        $this->checkout([
+            'customer_address' => 'Kecamatan Medan Kota, Kota Medan, Sumatera Utara',
+            'street_name' => 'Kisamaun',
+            'house_number' => '4',
+            'address_detail' => 'GG. SMEA, rumah pagar putih',
+            'destination_latitude' => 3.589665,
+            'destination_longitude' => 98.673826,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'customer_address' => 'Jl. Kisamaun, No. 4, GG. SMEA, rumah pagar putih, Kecamatan Medan Kota, Kota Medan, Sumatera Utara',
+            'destination_latitude' => 3.589665,
+            'destination_longitude' => 98.673826,
+        ]);
+    }
+
     public function test_manual_address_checkout_leaves_destination_coordinates_null(): void
     {
         $this->checkout()->assertRedirect();
@@ -61,6 +79,32 @@ class CheckoutTest extends TestCase
             'destination_latitude' => null,
             'destination_longitude' => null,
         ]);
+    }
+
+    public function test_switching_to_a_manual_destination_stores_no_current_location_coordinates(): void
+    {
+        $this->checkout([
+            'customer_address' => 'Jl. Tujuan Manual No. 10, Medan',
+            'destination_latitude' => null,
+            'destination_longitude' => null,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'customer_address' => 'Jl. Tujuan Manual No. 10, Medan',
+            'destination_latitude' => null,
+            'destination_longitude' => null,
+        ]);
+    }
+
+    public function test_checkout_keeps_profile_address_unchanged_and_saves_an_order_address_snapshot(): void
+    {
+        $this->checkout([
+            'profile_address' => 'Jl. Profil No. 1, Medan',
+            'customer_address' => 'Jl. Tujuan Pesanan No. 8, Medan',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('users', ['address' => 'Jl. Profil No. 1, Medan']);
+        $this->assertDatabaseHas('orders', ['customer_address' => 'Jl. Tujuan Pesanan No. 8, Medan']);
     }
 
     public function test_customer_note_cannot_exceed_five_hundred_characters(): void
@@ -324,7 +368,10 @@ class CheckoutTest extends TestCase
 
     private function checkout(array $overrides = [])
     {
-        $user = User::factory()->create(['name' => 'Andi', 'role' => 'customer', 'phone' => '08123456789']);
+        $profileAddress = $overrides['profile_address'] ?? null;
+        unset($overrides['profile_address']);
+
+        $user = User::factory()->create(['name' => 'Andi', 'role' => 'customer', 'phone' => '08123456789', 'address' => $profileAddress]);
         PaymentSetting::create(['bank_name' => 'BCA', 'account_name' => 'Kopi Gajahmada', 'account_number' => '111111', 'is_active' => true, 'created_by' => $user->id]);
         $shippingMethod = $this->shippingMethod('Pengiriman Reguler', 'Reguler', 25000);
         $product = Product::create([

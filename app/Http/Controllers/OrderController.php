@@ -69,10 +69,12 @@ class OrderController extends Controller
             'destination_longitude' => 'nullable|numeric|between:-180,180|required_with:destination_latitude',
             'street_name' => 'nullable|string|max:255',
             'house_number' => 'nullable|string|max:50',
+            'address_detail' => 'nullable|string|max:500',
             'customer_note' => 'nullable|string|max:500',
         ]);
 
         $requiresAddressDetails = $this->addressRequiresManualDetails($validated['customer_address']);
+        $hasCoordinates = isset($validated['destination_latitude'], $validated['destination_longitude']);
 
         if ($requiresAddressDetails) {
             $addressErrors = [];
@@ -91,13 +93,23 @@ class OrderController extends Controller
         }
 
         $customerAddress = $validated['customer_address'];
-        if ($requiresAddressDetails) {
-            $customerAddress = sprintf(
-                'Jl. %s, No. %s, %s',
-                trim($validated['street_name']),
-                trim($validated['house_number']),
-                $customerAddress,
-            );
+        if ($requiresAddressDetails || $hasCoordinates) {
+            $addressParts = [];
+
+            if (filled($validated['street_name'] ?? null) || filled($validated['house_number'] ?? null)) {
+                $addressParts[] = sprintf(
+                    'Jl. %s, No. %s',
+                    trim($validated['street_name'] ?? ''),
+                    trim($validated['house_number'] ?? ''),
+                );
+            }
+
+            if (filled($validated['address_detail'] ?? null)) {
+                $addressParts[] = trim($validated['address_detail']);
+            }
+
+            $addressParts[] = $customerAddress;
+            $customerAddress = implode(', ', $addressParts);
         }
 
         $paymentSetting = PaymentSetting::where('is_active', true)->first();
