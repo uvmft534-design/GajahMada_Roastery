@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductCategoryController;
 use App\Http\Controllers\Admin\ComplaintController as AdminComplaintController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ShippingMethodController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ComplaintController;
@@ -47,6 +48,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::post('/orders/{order}/items/{orderItem}/review', [ProductReviewController::class, 'store'])->name('orders.items.review.store');
 
     Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout/current-location', [OrderController::class, 'reverseGeocode'])->name('checkout.current-location');
     Route::post('/orders/checkout', [OrderController::class, 'store'])->name('orders.store');
 
 });
@@ -79,6 +81,10 @@ Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->group(functio
     Route::post('/admin/product-categories', [ProductCategoryController::class, 'store'])->name('admin.product-categories.store');
     Route::put('/admin/product-categories/{category}', [ProductCategoryController::class, 'update'])->name('admin.product-categories.update');
     Route::delete('/admin/product-categories/{category}', [ProductCategoryController::class, 'destroy'])->name('admin.product-categories.destroy');
+    Route::get('/admin/shipping-methods', [ShippingMethodController::class, 'index'])->name('admin.shipping-methods.index');
+    Route::post('/admin/shipping-methods', [ShippingMethodController::class, 'store'])->name('admin.shipping-methods.store');
+    Route::put('/admin/shipping-methods/{shippingMethod}', [ShippingMethodController::class, 'update'])->name('admin.shipping-methods.update');
+    Route::delete('/admin/shipping-methods/{shippingMethod}', [ShippingMethodController::class, 'destroy'])->name('admin.shipping-methods.destroy');
 });
 
 Route::middleware(['auth', 'verified', 'role:admin,super_admin'])->get('/admin/payment-settings', [PaymentSettingController::class, 'index'])->name('admin.payment-settings.index');

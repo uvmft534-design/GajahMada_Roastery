@@ -21,8 +21,10 @@ class OrderFulfillmentTest extends TestCase
         $order->update(['payment_status' => 'paid']);
         $this->actingAs($admin)->post(route('admin.orders.process', $order))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'status' => 'processing']);
+        $this->assertNotNull($order->fresh()->processing_at);
         $this->actingAs($admin)->post(route('admin.orders.packed', $order))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'status' => 'packed']);
+        $this->assertNotNull($order->fresh()->packed_at);
     }
 
     public function test_customer_cancel_releases_reserved_stock_once(): void

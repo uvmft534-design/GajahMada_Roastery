@@ -23,6 +23,7 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'googleLinked' => filled($request->user()->google_id),
             'status' => session('status'),
+            'checkoutPhoneRequired' => session('checkout_phone_required'),
         ]);
     }
 
@@ -31,7 +32,15 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
+
+        if (filled($validated['phone'] ?? null)) {
+            $phone = preg_replace('/\D+/', '', $validated['phone']);
+            $phone = str_starts_with($phone, '62') ? substr($phone, 2) : $phone;
+            $validated['phone'] = '0'.ltrim($phone, '0');
+        }
+
+        $request->user()->fill($validated);
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;

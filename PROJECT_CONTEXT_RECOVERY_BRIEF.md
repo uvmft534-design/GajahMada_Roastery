@@ -293,3 +293,13 @@ Tests tidak dijalankan pada audit karena PHP CLI tidak tersedia, dan PHP XAMPP 8
 8. Order item adalah historical snapshot meski produk berubah/hilang.
 9. Working tree berisi fitur aktif yang belum dikomit, khususnya complaint/staff access.
 10. PHP XAMPP 8.2.4 tidak dapat menjalankan dependency saat ini; butuh PHP >= 8.4.1.
+
+---
+
+## Revision Marker: `hotfix_profile_account`
+
+- Checkout mewajibkan nomor WhatsApp tersimpan pada profil customer.
+- Checkout memakai nama dan nomor WhatsApp dari profil di server; keduanya tidak dapat diubah dari form checkout.
+- Customer tanpa nomor WhatsApp diarahkan ke Pengaturan Profil sebelum order dibuat.
+- Alamat checkout dapat diisi dari lokasi saat ini melalui browser geolocation dan Google Maps Geocoding API (`GOOGLE_MAPS_API_KEY`).
+- Alamat serta catatan pesanan tetap merupakan snapshot order dan tidak mengubah profil otomatis.

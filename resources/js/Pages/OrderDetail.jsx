@@ -52,7 +52,7 @@ export default function OrderDetail({ order, items = [] }) {
     maximumFractionDigits: 0,
   });
 
-  const shippingLabel = order.shipping_method === 'instant' ? 'Instant' : 'Reguler';
+  const shippingLabel = order.shipping_method || 'Belum dipilih';
   const canContinuePayment = order.status === 'awaiting_payment' && ['unpaid', 'rejected'].includes(order.payment_status);
 
   return (

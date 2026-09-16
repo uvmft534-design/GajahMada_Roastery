@@ -39,9 +39,13 @@ class Order extends Model
         'total_amount',
         'tracking_number',
         'stock_released_at',
+        'processing_at',
+        'packed_at',
+        'pickup_requested_at',
         'picked_up_at',
         'shipped_at',
         'delivered_at',
+        'completed_at',
         'admin_seen_at',
     ];
 
@@ -80,9 +84,13 @@ class Order extends Model
         return [
             'stock_released_at' => 'datetime',
             'payment_reviewed_at' => 'datetime',
+            'processing_at' => 'datetime',
+            'packed_at' => 'datetime',
+            'pickup_requested_at' => 'datetime',
             'picked_up_at' => 'datetime',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'completed_at' => 'datetime',
             'admin_seen_at' => 'datetime',
         ];
     }

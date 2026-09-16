@@ -7,8 +7,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ShippingMethod;
 use App\Models\User;
 use App\Services\OrderFulfillmentService;
+use App\Services\ReverseGeocodingService;
 use App\Services\RevenueAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +41,10 @@ class OrderController extends Controller
 
         return Inertia::render('Checkout', [
             'items' => $items,
+            'phoneMissing' => blank($request->user()->phone),
+            'shippingMethods' => ShippingMethod::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'type', 'description', 'delivery_fee']),
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -47,23 +53,57 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        if (blank($user->phone)) {
+            return redirect()->route('profile.edit')->with('checkout_phone_required', 'Lengkapi nomor WhatsApp di profil sebelum membuat pesanan.');
+        }
+
         $validated = $request->validate([
             'cart_item_ids' => 'required|array|min:1',
             'cart_item_ids.*' => 'integer|distinct',
-            'shipping_method' => 'required|in:instant,regular',
+            'shipping_method_id' => 'required|integer|exists:shipping_methods,id',
             'payment_method' => 'required|in:virtual_account',
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:30',
             'customer_address' => 'required|string|max:1000',
+            'street_name' => 'nullable|string|max:255',
+            'house_number' => 'nullable|string|max:50',
             'customer_note' => 'nullable|string|max:500',
         ]);
+
+        $requiresAddressDetails = $this->addressRequiresManualDetails($validated['customer_address']);
+
+        if ($requiresAddressDetails) {
+            $addressErrors = [];
+
+            if (blank($validated['street_name'])) {
+                $addressErrors['street_name'] = 'Nama jalan wajib diisi agar alamat pengiriman lengkap.';
+            }
+
+            if (blank($validated['house_number'])) {
+                $addressErrors['house_number'] = 'Nomor rumah wajib diisi agar alamat pengiriman lengkap.';
+            }
+
+            if ($addressErrors) {
+                throw ValidationException::withMessages($addressErrors);
+            }
+        }
+
+        $customerAddress = $validated['customer_address'];
+        if ($requiresAddressDetails) {
+            $customerAddress = sprintf(
+                'Jl. %s, No. %s, %s',
+                trim($validated['street_name']),
+                trim($validated['house_number']),
+                $customerAddress,
+            );
+        }
 
         $paymentSetting = PaymentSetting::where('is_active', true)->first();
         if (! $paymentSetting) {
             return back()->withErrors(['payment_method' => 'Metode pembayaran sedang belum tersedia. Silakan coba kembali nanti.']);
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $paymentSetting) {
+        $order = DB::transaction(function () use ($request, $validated, $paymentSetting, $user, $customerAddress) {
             $cartItems = CartItem::query()
                 ->whereIn('id', $validated['cart_item_ids'])
                 ->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))
@@ -100,23 +140,32 @@ class OrderController extends Controller
                 $subtotal += (int) $product->price * $cartItem->qty;
             }
 
-            $user = $request->user();
-            $deliveryFee = $validated['shipping_method'] === 'instant' ? 30000 : 25000;
+            $shippingMethod = ShippingMethod::query()
+                ->lockForUpdate()
+                ->find($validated['shipping_method_id']);
+
+            if (! $shippingMethod) {
+                throw ValidationException::withMessages([
+                    'shipping_method_id' => 'Metode pengiriman tidak lagi tersedia. Silakan pilih kembali.',
+                ]);
+            }
+
+            $deliveryFee = (int) $shippingMethod->delivery_fee;
             $total = $subtotal + $deliveryFee;
 
             $order = Order::create([
                 'user_id' => $user?->id,
                 'order_number' => 'ROAST-'.strtoupper(Str::random(8)),
                 'status' => 'awaiting_payment',
-                'shipping_method' => $validated['shipping_method'],
+                'shipping_method' => $shippingMethod->name,
                 'payment_method' => 'virtual_account',
                 'payment_status' => 'unpaid',
                 'va_number' => $paymentSetting->account_number,
                 'payment_bank_name' => $paymentSetting->bank_name,
                 'payment_account_name' => $paymentSetting->account_name,
-                'customer_name' => $validated['customer_name'],
-                'customer_phone' => $validated['customer_phone'],
-                'customer_address' => $validated['customer_address'],
+                'customer_name' => $user->name,
+                'customer_phone' => $user->phone,
+                'customer_address' => $customerAddress,
                 'customer_note' => $validated['customer_note'] ?? null,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
@@ -158,6 +207,33 @@ class OrderController extends Controller
         return Inertia::render('Payment', [
             'order' => $order,
         ]);
+    }
+
+    public function reverseGeocode(Request $request, ReverseGeocodingService $reverseGeocoding)
+    {
+        $coordinates = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $address = $reverseGeocoding->reverse(
+            (float) $coordinates['latitude'],
+            (float) $coordinates['longitude'],
+        );
+
+        if (! $address) {
+            return response()->json(['message' => 'Alamat dari lokasi saat ini tidak dapat ditemukan.'], 422);
+        }
+
+        return response()->json(['address' => $address]);
+    }
+
+    private function addressRequiresManualDetails(string $address): bool
+    {
+        $hasStreet = preg_match('/(?:\bjl\.?|\bjalan\b|\bgg\.?|\bgang\b)/ui', $address) === 1;
+        $hasHouseNumber = preg_match('/(?:\bno\.?\s*|\bnomor\s*)\d+/ui', $address) === 1;
+
+        return ! $hasStreet || ! $hasHouseNumber;
     }
 
     public function paymentSubmitted(Order $order)

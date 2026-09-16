@@ -1,12 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Boxes, CreditCard, FileText, LayoutDashboard, LogOut, Menu, MessageSquareWarning, Package, UserRoundCheck, X } from 'lucide-react';
+import { Boxes, CreditCard, FileText, LayoutDashboard, LogOut, Menu, MessageSquareWarning, Package, Truck, UserRoundCheck, X } from 'lucide-react';
 
 const items = [
   { key: 'overview', label: 'Ringkasan', routeName: 'admin.dashboard', icon: LayoutDashboard },
   { key: 'orders', label: 'Pesanan', routeName: 'admin.orders.index', icon: Package },
   { key: 'products', label: 'Produk', routeName: 'admin.products.index', icon: Boxes },
+  { key: 'shipping-methods', label: 'Pengiriman', routeName: 'admin.shipping-methods.index', icon: Truck },
   { key: 'complaints', label: 'Komplain', routeName: 'admin.complaints.index', icon: MessageSquareWarning },
   { key: 'payments', label: 'Pembayaran', routeName: 'admin.payment-settings.index', icon: CreditCard },
   { key: 'reports', label: 'Laporan', routeName: 'admin.reports.index', icon: FileText },

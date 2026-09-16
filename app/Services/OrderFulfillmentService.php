@@ -13,13 +13,13 @@ class OrderFulfillmentService
     public function process(Order $order): void
     {
         abort_unless($order->status === 'awaiting_payment' && $order->payment_status === 'paid', 422, 'Pesanan hanya dapat diproses setelah pembayaran dikonfirmasi.');
-        $order->update(['status' => 'processing']);
+        $order->update(['status' => 'processing', 'processing_at' => now()]);
     }
 
     public function pack(Order $order): void
     {
         abort_unless($order->status === 'processing', 422, 'Hanya pesanan yang sedang diproses yang dapat dikemas.');
-        $order->update(['status' => 'packed']);
+        $order->update(['status' => 'packed', 'packed_at' => now()]);
     }
 
     public function cancel(Order $order): void
@@ -42,7 +42,7 @@ class OrderFulfillmentService
         abort_unless($courier->isCourier(), 422, 'Courier yang dipilih tidak valid.');
         abort_unless($order->status === 'packed' && $order->payment_status === 'paid', 422, 'Pickup hanya dapat diminta untuk pesanan yang sudah dikemas dan dibayar.');
 
-        $order->update(['courier_id' => $courier->id, 'status' => 'pickup_requested']);
+        $order->update(['courier_id' => $courier->id, 'status' => 'pickup_requested', 'pickup_requested_at' => now()]);
     }
 
     public function confirmPickup(Order $order): void
@@ -75,7 +75,7 @@ class OrderFulfillmentService
     public function complete(Order $order): void
     {
         abort_unless($order->status === 'delivered', 422, 'Pesanan hanya dapat diselesaikan setelah sampai tujuan.');
-        $order->update(['status' => 'completed']);
+        $order->update(['status' => 'completed', 'completed_at' => now()]);
     }
 
     private function uniqueTrackingNumber(): string

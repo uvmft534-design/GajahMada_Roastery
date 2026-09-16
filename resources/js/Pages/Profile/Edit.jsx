@@ -24,7 +24,7 @@ function GooglePasswordSetup() {
     </div>;
 }
 
-export default function Edit({ mustVerifyEmail, status, googleLinked }) {
+export default function Edit({ mustVerifyEmail, status, googleLinked, checkoutPhoneRequired }) {
     return (
         <ProfileLayout
             header={
@@ -43,6 +43,7 @@ export default function Edit({ mustVerifyEmail, status, googleLinked }) {
                         </div>
                     </div>
                     <div className="rounded-[2rem] border border-[#2C1E16]/10 bg-white p-6 shadow-sm sm:p-8">
+                        {checkoutPhoneRequired && <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900"><p className="font-bold">Nomor WhatsApp diperlukan untuk checkout.</p><p className="mt-1 text-amber-800/80">Isi nomor telepon di bawah ini, simpan perubahan, lalu kembali ke keranjang untuk melanjutkan pesanan.</p></div>}
                         <div className="mb-6 flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-orange-50 text-[#D4813E]"><Settings size={19} /></div><div><h2 className="font-bold">Informasi akun</h2><p className="text-sm text-[#2C1E16]/55">Nama dan email untuk pesanan Anda.</p></div></div>
                         <UpdateProfileInformationForm
                             mustVerifyEmail={mustVerifyEmail}

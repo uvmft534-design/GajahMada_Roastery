@@ -19,6 +19,7 @@ class CourierFulfillmentTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.orders.request-pickup', $order), ['courier_id' => $courier->id])->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'courier_id' => $courier->id, 'status' => 'pickup_requested']);
+        $this->assertNotNull($order->fresh()->pickup_requested_at);
     }
 
     public function test_admin_cannot_assign_non_courier_or_request_from_invalid_status(): void
@@ -44,6 +45,7 @@ class CourierFulfillmentTest extends TestCase
         $this->actingAs($courierB)->post(route('courier.orders.confirm-pickup', $assigned))->assertForbidden();
         $this->actingAs($courierA)->post(route('courier.orders.confirm-pickup', $assigned))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $assigned->order_id, 'status' => 'picked_up']);
+        $this->assertNotNull($assigned->fresh()->picked_up_at);
     }
 
     public function test_courier_tracking_and_delivery_transitions_are_enforced(): void
@@ -58,6 +60,8 @@ class CourierFulfillmentTest extends TestCase
         $this->actingAs($courier)->post(route('courier.orders.start-shipping', $order))->assertRedirect();
         $this->actingAs($courier)->post(route('courier.orders.delivered', $order))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'status' => 'delivered']);
+        $this->assertNotNull($order->fresh()->shipped_at);
+        $this->assertNotNull($order->fresh()->delivered_at);
     }
 
     public function test_invalid_courier_jumps_are_rejected(): void
@@ -93,6 +97,7 @@ class CourierFulfillmentTest extends TestCase
         $this->actingAs($owner)->post(route('orders.complete', $shipped))->assertStatus(422);
         $this->actingAs($owner)->post(route('orders.complete', $delivered))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $delivered->order_id, 'status' => 'completed']);
+        $this->assertNotNull($delivered->fresh()->completed_at);
         $this->actingAs($courier)->get(route('orders.proof.view', $delivered))->assertForbidden();
     }
 }

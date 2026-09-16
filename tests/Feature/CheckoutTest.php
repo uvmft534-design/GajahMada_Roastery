@@ -7,6 +7,7 @@ use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ShippingMethod;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -46,9 +47,37 @@ class CheckoutTest extends TestCase
 
     public function test_receiver_information_is_required(): void
     {
-        foreach (['customer_name', 'customer_phone', 'customer_address'] as $field) {
+        foreach (['customer_address'] as $field) {
             $this->checkout([$field => null])->assertSessionHasErrors($field);
         }
+    }
+
+    public function test_checkout_requires_street_and_house_number_when_address_has_no_delivery_details(): void
+    {
+        $this->checkout(['customer_address' => 'Kelurahan Petojo Utara, Jakarta'])
+            ->assertSessionHasErrors(['street_name', 'house_number']);
+    }
+
+    public function test_checkout_combines_manual_street_and_house_number_with_an_incomplete_address(): void
+    {
+        $this->checkout([
+            'customer_address' => 'Kelurahan Petojo Utara, Jakarta',
+            'street_name' => 'Gajah Mada',
+            'house_number' => '12A',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'customer_address' => 'Jl. Gajah Mada, No. 12A, Kelurahan Petojo Utara, Jakarta',
+        ]);
+    }
+
+    public function test_customer_without_a_profile_phone_is_redirected_to_profile_before_checkout(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer', 'phone' => null]);
+
+        $this->actingAs($customer)->post(route('orders.store'), [])
+            ->assertRedirect(route('profile.edit'))
+            ->assertSessionHas('checkout_phone_required');
     }
 
     public function test_checkout_succeeds_when_all_receiver_information_is_provided(): void
@@ -193,7 +222,8 @@ class CheckoutTest extends TestCase
 
     public function test_regular_shipping_uses_the_server_calculated_fee(): void
     {
-        $this->checkout(['shipping_method' => 'regular'])->assertRedirect();
+        $method = $this->shippingMethod('Pengiriman Reguler', 'Reguler', 25000);
+        $this->checkout(['shipping_method_id' => $method->id])->assertRedirect();
 
         $this->assertDatabaseHas('orders', [
             'subtotal' => 100000,
@@ -204,10 +234,12 @@ class CheckoutTest extends TestCase
 
     public function test_instant_shipping_uses_the_server_calculated_fee(): void
     {
-        $this->checkout(['shipping_method' => 'instant'])->assertRedirect();
+        $method = $this->shippingMethod('Pengiriman Instant', 'Instant', 30000);
+        $this->checkout(['shipping_method_id' => $method->id])->assertRedirect();
 
         $this->assertDatabaseHas('orders', [
             'subtotal' => 100000,
+            'shipping_method' => 'Pengiriman Instant',
             'delivery_fee' => 30000,
             'total_amount' => 130000,
         ]);
@@ -240,8 +272,9 @@ class CheckoutTest extends TestCase
 
     public function test_selected_cart_items_create_one_order_with_multiple_order_items_and_leave_unselected_items_in_cart(): void
     {
-        $user = User::factory()->create(['role' => 'customer']);
+        $user = User::factory()->create(['name' => 'Andi', 'role' => 'customer', 'phone' => '08123456789']);
         PaymentSetting::create(['bank_name' => 'BCA', 'account_name' => 'Kopi Gajahmada', 'account_number' => '111111', 'is_active' => true, 'created_by' => $user->id]);
+        $shippingMethod = $this->shippingMethod('Pengiriman Reguler', 'Reguler', 25000);
         $first = Product::factory()->create(['price' => 100000, 'stock' => 10]);
         $second = Product::factory()->create(['price' => 200000, 'stock' => 10]);
         $third = Product::factory()->create(['price' => 50000, 'stock' => 10]);
@@ -252,7 +285,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($user)->post(route('orders.store'), [
             'cart_item_ids' => [$firstItem->id, $secondItem->id],
-            'shipping_method' => 'regular', 'payment_method' => 'virtual_account',
+            'shipping_method_id' => $shippingMethod->id, 'payment_method' => 'virtual_account',
             'customer_name' => 'Andi', 'customer_phone' => '08123456789', 'customer_address' => 'Jl. Contoh No. 1',
         ])->assertRedirect();
 
@@ -268,8 +301,9 @@ class CheckoutTest extends TestCase
 
     private function checkout(array $overrides = [])
     {
-        $user = User::factory()->create(['role' => 'customer']);
+        $user = User::factory()->create(['name' => 'Andi', 'role' => 'customer', 'phone' => '08123456789']);
         PaymentSetting::create(['bank_name' => 'BCA', 'account_name' => 'Kopi Gajahmada', 'account_number' => '111111', 'is_active' => true, 'created_by' => $user->id]);
+        $shippingMethod = $this->shippingMethod('Pengiriman Reguler', 'Reguler', 25000);
         $product = Product::create([
             'product_name' => 'Gayo',
             'category' => 'Arabica',
@@ -289,12 +323,20 @@ class CheckoutTest extends TestCase
 
         return $this->actingAs($user)->post(route('orders.store'), array_merge([
             'cart_item_ids' => [$cartItem->id],
-            'shipping_method' => 'regular',
+            'shipping_method_id' => $shippingMethod->id,
             'payment_method' => 'virtual_account',
             'customer_name' => 'Andi',
             'customer_phone' => '08123456789',
             'customer_address' => 'Jl. Contoh No. 1',
             'customer_note' => null,
         ], $overrides));
+    }
+
+    private function shippingMethod(string $name, string $type, int $deliveryFee): ShippingMethod
+    {
+        return ShippingMethod::firstOrCreate(
+            ['name' => $name],
+            ['type' => $type, 'description' => null, 'delivery_fee' => $deliveryFee],
+        );
     }
 }
