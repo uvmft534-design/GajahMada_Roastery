@@ -31,12 +31,18 @@ export default function Checkout({ items, auth, shippingMethods = [], phoneMissi
     const { data, setData, post, processing, errors } = useForm({
         cart_item_ids: items.map((item) => item.id), shipping_method_id: shippingMethods[0]?.id ?? '', payment_method: 'virtual_account',
         customer_name: auth.user.name ?? '', customer_phone: auth.user.phone ?? '', customer_address: auth.user.address ?? '', street_name: '', house_number: '', customer_note: '',
+        destination_latitude: null, destination_longitude: null,
     }); 
     const subtotal = items.reduce((total, item) => total + Number(item.product.price) * item.qty, 0);
     const selectedShippingMethod = shippingMethods.find((method) => String(method.id) === String(data.shipping_method_id));
     const deliveryFee = Number(selectedShippingMethod?.delivery_fee ?? 0);
     const total = subtotal + deliveryFee;
     const needsManualAddressDetails = addressRequiresManualDetails(data.customer_address);
+    const updateCustomerAddress = (address) => {
+        setData('customer_address', address);
+        setData('destination_latitude', null);
+        setData('destination_longitude', null);
+    };
 
     const fillAddressFromCurrentLocation = () => {
         setLocationError('');
@@ -53,6 +59,8 @@ export default function Checkout({ items, auth, shippingMethods = [], phoneMissi
                     longitude: coords.longitude,
                 });
                 setData('customer_address', response.data.address);
+                setData('destination_latitude', coords.latitude);
+                setData('destination_longitude', coords.longitude);
             } catch (error) {
                 setLocationError(error.response?.data?.message || 'Lokasi saat ini tidak dapat diubah menjadi alamat.');
             } finally {
@@ -83,7 +91,7 @@ export default function Checkout({ items, auth, shippingMethods = [], phoneMissi
                                 {phoneMissing ? <div className="border-t border-[#2C1E16]/10 py-5"><div className="flex items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-[.12em] text-[#2C1E16]/60">Nomor WhatsApp</p><Link href={route('profile.edit')} className="inline-flex items-center gap-1.5 rounded-lg bg-[#FFF5EA] px-2.5 py-1.5 text-xs font-bold text-[#B86632] transition hover:bg-[#FFE9D2]"><Phone size={14} />Tambahkan nomor</Link></div><p className="mt-3 text-sm font-semibold text-red-600">Belum diisi di profil</p></div> : <InfoValue label="Nomor WhatsApp" value={formattedPhone(data.customer_phone)} />}
                                 <div className="border-t border-[#2C1E16]/10 py-5 sm:col-span-2">
                                     <div className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-[.12em] text-[#2C1E16]/60">Alamat lengkap</span><div className="flex items-center gap-1"><button type="button" onClick={fillAddressFromCurrentLocation} disabled={locationLoading} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-[#B86632] transition hover:bg-[#FFF5EA] disabled:opacity-60"><>{locationLoading ? <LoaderCircle className="animate-spin" size={14} /> : <LocateFixed size={14} />}</>Gunakan lokasi saat ini</button><button type="button" onClick={() => setEditingAddress((editing) => !editing)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold text-[#B86632] transition hover:bg-[#FFF5EA]"><Pencil size={14} />{editingAddress ? 'Selesai' : 'Ubah'}</button></div></div>
-                                    {editingAddress ? <textarea autoFocus rows="3" value={data.customer_address} onChange={(event) => setData('customer_address', event.target.value)} placeholder="Nama jalan, nomor rumah, kelurahan, kecamatan, dan kota" className="mt-3 w-full resize-none rounded-xl border border-[#D4813E]/50 bg-[#FFF9F3] px-3 py-3 text-sm outline-none focus:border-[#D4813E] focus:ring-0" /> : <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[#2C1E16]/80">{data.customer_address || 'Alamat belum diisi. Tekan Ubah untuk menambahkan alamat pengiriman.'}</p>}
+                                    {editingAddress ? <textarea autoFocus rows="3" value={data.customer_address} onChange={(event) => updateCustomerAddress(event.target.value)} placeholder="Nama jalan, nomor rumah, kelurahan, kecamatan, dan kota" className="mt-3 w-full resize-none rounded-xl border border-[#D4813E]/50 bg-[#FFF9F3] px-3 py-3 text-sm outline-none focus:border-[#D4813E] focus:ring-0" /> : <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[#2C1E16]/80">{data.customer_address || 'Alamat belum diisi. Tekan Ubah untuk menambahkan alamat pengiriman.'}</p>}
                                     {locationError && <p className="mt-2 text-xs font-medium text-red-600">{locationError}</p>}
                                     {errors.customer_address && <p className="mt-2 text-xs text-red-600">{errors.customer_address}</p>}
                                     {needsManualAddressDetails && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-sm font-bold text-amber-900">Lengkapi detail alamat</p><p className="mt-1 text-xs leading-relaxed text-amber-800/80">Lokasi belum memuat nama jalan dan nomor rumah. Keduanya wajib diisi agar pesanan dapat diantar.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><label htmlFor="street_name" className="text-xs font-bold text-amber-900">Nama jalan</label><input id="street_name" value={data.street_name} onChange={(event) => setData('street_name', event.target.value)} placeholder="Contoh: Gajah Mada" className="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#D4813E] focus:ring-0" /><p className="mt-1 text-xs text-red-600">{errors.street_name}</p></div><div><label htmlFor="house_number" className="text-xs font-bold text-amber-900">Nomor rumah</label><input id="house_number" value={data.house_number} onChange={(event) => setData('house_number', event.target.value)} placeholder="Contoh: 12A" className="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#D4813E] focus:ring-0" /><p className="mt-1 text-xs text-red-600">{errors.house_number}</p></div></div></div>}

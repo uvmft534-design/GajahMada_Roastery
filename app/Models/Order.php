@@ -32,6 +32,8 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'customer_address',
+        'destination_latitude',
+        'destination_longitude',
         'customer_note',
         'delivery_note',
         'subtotal',
@@ -82,6 +84,8 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'destination_latitude' => 'float',
+            'destination_longitude' => 'float',
             'stock_released_at' => 'datetime',
             'payment_reviewed_at' => 'datetime',
             'processing_at' => 'datetime',

@@ -65,6 +65,8 @@ class OrderController extends Controller
             'shipping_method_id' => 'required|integer|exists:shipping_methods,id',
             'payment_method' => 'required|in:virtual_account',
             'customer_address' => 'required|string|max:1000',
+            'destination_latitude' => 'nullable|numeric|between:-90,90|required_with:destination_longitude',
+            'destination_longitude' => 'nullable|numeric|between:-180,180|required_with:destination_latitude',
             'street_name' => 'nullable|string|max:255',
             'house_number' => 'nullable|string|max:50',
             'customer_note' => 'nullable|string|max:500',
@@ -75,11 +77,11 @@ class OrderController extends Controller
         if ($requiresAddressDetails) {
             $addressErrors = [];
 
-            if (blank($validated['street_name'])) {
+            if (blank($validated['street_name'] ?? null)) {
                 $addressErrors['street_name'] = 'Nama jalan wajib diisi agar alamat pengiriman lengkap.';
             }
 
-            if (blank($validated['house_number'])) {
+            if (blank($validated['house_number'] ?? null)) {
                 $addressErrors['house_number'] = 'Nomor rumah wajib diisi agar alamat pengiriman lengkap.';
             }
 
@@ -166,6 +168,8 @@ class OrderController extends Controller
                 'customer_name' => $user->name,
                 'customer_phone' => $user->phone,
                 'customer_address' => $customerAddress,
+                'destination_latitude' => $validated['destination_latitude'] ?? null,
+                'destination_longitude' => $validated['destination_longitude'] ?? null,
                 'customer_note' => $validated['customer_note'] ?? null,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,

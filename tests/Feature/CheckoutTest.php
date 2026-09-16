@@ -40,6 +40,29 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('orders', ['customer_note' => 'Packing double']);
     }
 
+    public function test_checkout_saves_destination_coordinates_when_provided(): void
+    {
+        $this->checkout([
+            'destination_latitude' => -6.1753924,
+            'destination_longitude' => 106.8271528,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'destination_latitude' => -6.1753924,
+            'destination_longitude' => 106.8271528,
+        ]);
+    }
+
+    public function test_manual_address_checkout_leaves_destination_coordinates_null(): void
+    {
+        $this->checkout()->assertRedirect();
+
+        $this->assertDatabaseHas('orders', [
+            'destination_latitude' => null,
+            'destination_longitude' => null,
+        ]);
+    }
+
     public function test_customer_note_cannot_exceed_five_hundred_characters(): void
     {
         $this->checkout(['customer_note' => str_repeat('a', 501)])->assertSessionHasErrors('customer_note');
