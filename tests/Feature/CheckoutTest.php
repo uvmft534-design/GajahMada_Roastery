@@ -40,6 +40,21 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('orders', ['customer_note' => 'Packing double']);
     }
 
+    public function test_checkout_succeeds_without_order_or_product_notes(): void
+    {
+        $this->checkout()->assertRedirect();
+
+        $this->assertDatabaseHas('orders', ['customer_note' => null]);
+        $this->assertDatabaseHas('order_items', ['item_note' => null]);
+    }
+
+    public function test_checkout_saves_a_product_note_on_its_order_item(): void
+    {
+        $this->checkout(['item_notes' => [1 => 'Giling sedikit lebih halus']])->assertRedirect();
+
+        $this->assertDatabaseHas('order_items', ['item_note' => 'Giling sedikit lebih halus']);
+    }
+
     public function test_checkout_saves_destination_coordinates_when_provided(): void
     {
         $this->checkout([
@@ -60,6 +75,7 @@ class CheckoutTest extends TestCase
             'street_name' => 'Kisamaun',
             'house_number' => '4',
             'address_detail' => 'GG. SMEA, rumah pagar putih',
+            'final_address_preview' => 'Jl. Kisamaun, No. 4, GG. SMEA, rumah pagar putih, Kecamatan Medan Kota, Kota Medan, Sumatera Utara',
             'destination_latitude' => 3.589665,
             'destination_longitude' => 98.673826,
         ])->assertRedirect();
@@ -354,11 +370,15 @@ class CheckoutTest extends TestCase
             'cart_item_ids' => [$firstItem->id, $secondItem->id],
             'shipping_method_id' => $shippingMethod->id, 'payment_method' => 'virtual_account',
             'customer_name' => 'Andi', 'customer_phone' => '08123456789', 'customer_address' => 'Jl. Contoh No. 1',
+            'item_notes' => [$firstItem->id => 'A', $secondItem->id => 'B'],
         ])->assertRedirect();
 
         $order = Order::sole();
         $this->assertSame(2, $order->items()->count());
         $this->assertSame(300000, $order->subtotal);
+        $this->assertDatabaseHas('order_items', ['order_id' => $order->order_id, 'product_id' => $first->product_id, 'item_note' => 'A']);
+        $this->assertDatabaseHas('order_items', ['order_id' => $order->order_id, 'product_id' => $second->product_id, 'item_note' => 'B']);
+        $this->assertDatabaseMissing('order_items', ['order_id' => $order->order_id, 'product_id' => $first->product_id, 'item_note' => 'B']);
         $this->assertDatabaseMissing('cart_items', ['id' => $firstItem->id]);
         $this->assertDatabaseMissing('cart_items', ['id' => $secondItem->id]);
         $this->assertDatabaseHas('cart_items', ['id' => $unselectedItem->id]);

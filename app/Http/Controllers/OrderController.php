@@ -71,6 +71,8 @@ class OrderController extends Controller
             'house_number' => 'nullable|string|max:50',
             'address_detail' => 'nullable|string|max:500',
             'customer_note' => 'nullable|string|max:500',
+            'item_notes' => 'nullable|array',
+            'item_notes.*' => 'nullable|string|max:500',
         ]);
 
         $requiresAddressDetails = $this->addressRequiresManualDetails($validated['customer_address']);
@@ -202,6 +204,7 @@ class OrderController extends Controller
                     'unit_price' => (int) $product->price,
                     'subtotal' => $itemSubtotal,
                     'brew_method' => $cartItem->brew_method,
+                    'item_note' => $validated['item_notes'][$cartItem->id] ?? null,
                 ]);
 
                 $product->decrement('stock', $cartItem->qty);
