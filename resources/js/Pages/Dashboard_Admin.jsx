@@ -5,6 +5,16 @@ import { orderStatusLabel } from '../utils/orderStatus';
 import AdminBackButton from '@/Components/AdminBackButton';
 import AdminPanelNav from '@/Components/AdminPanelNav';
 
+const standardVariants = () => [
+  { weight_grams: 200, enabled: false, price: '', stock: '' },
+  { weight_grams: 1000, enabled: false, price: '', stock: '' },
+];
+const variantsForProduct = (variants = []) => {
+  const existing = variants.map((variant) => ({ ...variant, enabled: true }));
+  return [...existing, ...standardVariants().filter((variant) => !existing.some((current) => Number(current.weight_grams) === variant.weight_grams))];
+};
+const weightLabel = (weight) => Number(weight) === 1000 ? '1 kg' : `${weight} gram`;
+
 export default function DashboardAdmin({ section = 'overview', products = [], orders = [], analytics = {}, revenueAnalytics = {}, attention = {}, filters = {}, couriers = [], categories = [] }) {
   const { adminNotifications = {} } = usePage().props;
   const orderNotificationCount = Number(adminNotifications.orderNotificationCount || adminNotifications.newOrders || 0);
@@ -22,12 +32,10 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
   const filteredOrders = orderFilter === 'all' ? orderRows : orderRows.filter((order) => order.status === orderFilter);
 
   // Inertia Form Hook untuk kirim data & file gambar ke backend
-  const { data, setData, post, delete: destroy, processing, reset, errors } = useForm({
+  const { data, setData, post, transform, delete: destroy, processing, reset, errors } = useForm({
     product_name: '',
     category: '',
-    price: '',
-    stock: '',
-    weight_grams: '',
+    variants: standardVariants(),
     description: '',
     image: null,
   });
@@ -46,9 +54,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
     setData({
       product_name: product.product_name,
       category: product.category || '',
-      price: product.price,
-      stock: product.stock,
-      weight_grams: product.weight_grams || '',
+      variants: variantsForProduct(product.variants),
       description: product.description || '',
       image: null, // file baru opsional saat edit
     });
@@ -57,23 +63,14 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
 
   const handleSubmitForm = (e) => {
     e.preventDefault();
-    if (editingProduct) {
-      // Update data (menggunakan _method spoofing untuk POST ke route update)
-      post(route('admin.products.update', editingProduct.product_id), {
-        onSuccess: () => {
-          setIsModalOpen(false);
-          reset();
-        },
-      });
-    } else {
-      // Tambah produk baru
-      post(route('admin.products.store'), {
-        onSuccess: () => {
-          setIsModalOpen(false);
-          reset();
-        },
-      });
-    }
+    if (data.variants.filter((variant) => variant.enabled).length === 0) return;
+    transform((current) => ({ ...current, variants: current.variants.filter((variant) => variant.enabled).map(({ enabled, ...variant }) => variant) }));
+    post(editingProduct ? route('admin.products.update', editingProduct.product_id) : route('admin.products.store'), {
+      onSuccess: () => {
+        setIsModalOpen(false);
+        reset();
+      },
+    });
   };
 
   const handleDelete = (id) => {
@@ -290,8 +287,8 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                       <td className="p-4 max-w-xs truncate text-xs text-[#2C1E16]/70">
                         {item.description || '-'}
                       </td>
-                      <td className="p-4 font-bold">Rp {Number(item.price).toLocaleString('id-ID')}</td>
-                      <td className="p-4 font-medium text-[#2C1E16]/80">{item.stock} unit</td>
+                      <td className="p-4 font-bold">{(item.variant_price_from ?? (item.variants?.length === 1 ? item.variants[0]?.price : null)) ? `${item.variants?.length > 1 ? 'Mulai ' : ''}Rp ${Number(item.variant_price_from ?? item.variants[0]?.price).toLocaleString('id-ID')}` : '—'}</td>
+                      <td className="p-4 font-medium text-[#2C1E16]/80"><p>Stok Total: {item.variant_stock_total || 0}</p><p className="mt-1 text-[11px] text-[#2C1E16]/50">{item.variants?.map((variant) => `${weightLabel(variant.weight_grams)}: ${variant.stock}`).join(' · ') || 'Belum dikonfigurasi'}</p></td>
                       <td className="p-4 pr-6 sm:pr-8 text-right flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleOpenEditModal(item)}
@@ -322,9 +319,9 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
       {/* MODAL FORM */}
       {section === 'products' && isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg border border-[#2C1E16]/10 bg-white p-6 shadow-2xl sm:p-8">
+          <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col border border-[#2C1E16]/10 bg-white shadow-2xl">
             
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-none items-center justify-between border-b border-[#2C1E16]/10 px-5 py-4 sm:px-6">
               <div><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Katalog Produk</p><h3 className="mt-1 font-bold text-xl">{editingProduct ? 'Ubah Produk' : 'Tambah Produk Baru'}</h3></div>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -334,7 +331,8 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="space-y-5">
+            <form onSubmit={handleSubmitForm} className="flex min-h-0 flex-1 flex-col">
+              <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto px-5 py-4 sm:px-6 md:grid-cols-2">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">
                   Nama produk
@@ -364,36 +362,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                 {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">
-                    Harga
-                  </label>
-                  <div className="flex items-center rounded-xl border border-[#2C1E16]/15"><span className="pl-4 text-sm font-bold">Rp</span><input
-                    type="text" inputMode="numeric"
-                    required
-                    value={data.price === '' ? '' : Number(data.price).toLocaleString('id-ID')}
-                    onChange={(e) => setData('price', e.target.value.replace(/\D/g, ''))}
-                    placeholder="125.000"
-                    className="w-full px-3 py-2.5 text-sm focus:outline-none"
-                  /></div>
-                </div>
-                <div><label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">Berat Produk (g)</label><input type="number" min="1" required value={data.weight_grams} onChange={(e) => setData('weight_grams', e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#2C1E16]/15 text-sm" /></div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70 mb-1">
-                    Stok
-                  </label>
-                  <input 
-                    type="number" 
-                    required
-                    value={data.stock}
-                    onChange={(e) => setData('stock', e.target.value)}
-                    placeholder="20"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#2C1E16]/15 text-sm focus:outline-none focus:border-[#D4813E]"
-                  />
-                </div>
-              </div>
+              <div className="rounded-2xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-4 md:col-span-2"><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/70">Varian berat</p><p className="text-[11px] text-[#2C1E16]/55">Gunakan stok 0 untuk berhenti menjual sementara.</p></div><div className="mt-3 grid gap-3 md:grid-cols-2">{data.variants.map((variant, index) => { const isStandard = [200, 1000].includes(Number(variant.weight_grams)); return <div key={variant.weight_grams} className={`rounded-xl border p-3 ${variant.enabled ? 'border-[#D4813E]/40 bg-white' : 'border-[#2C1E16]/10 bg-white/60'}`}><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={variant.enabled} disabled={!isStandard} onChange={(event) => setData('variants', data.variants.map((current, currentIndex) => currentIndex === index ? { ...current, enabled: event.target.checked } : current))} className="accent-[#D4813E] disabled:opacity-70" />{weightLabel(variant.weight_grams)} {!isStandard && <span className="text-xs font-normal text-[#2C1E16]/50">varian legacy</span>}</label>{variant.enabled && <div className="mt-3 grid grid-cols-2 gap-3"><div><label className="text-xs font-semibold text-[#2C1E16]/60">Harga (Rp)</label><input type="text" inputMode="numeric" value={variant.price === '' ? '' : Number(variant.price).toLocaleString('id-ID')} onChange={(event) => setData('variants', data.variants.map((current, currentIndex) => currentIndex === index ? { ...current, price: event.target.value.replace(/\D/g, '') } : current))} className="mt-1 w-full rounded-xl border border-[#2C1E16]/15 px-3 py-2 text-sm" />{errors[`variants.${index}.price`] && <p className="mt-1 text-xs text-red-500">{errors[`variants.${index}.price`]}</p>}</div><div><label className="text-xs font-semibold text-[#2C1E16]/60">Stok</label><input type="number" min="0" value={variant.stock} onChange={(event) => setData('variants', data.variants.map((current, currentIndex) => currentIndex === index ? { ...current, stock: event.target.value } : current))} className="mt-1 w-full rounded-xl border border-[#2C1E16]/15 px-3 py-2 text-sm" />{errors[`variants.${index}.stock`] && <p className="mt-1 text-xs text-red-500">{errors[`variants.${index}.stock`]}</p>}</div></div>}</div>; })}</div>{errors.variants && <p className="mt-2 text-xs text-red-500">{errors.variants}</p>}</div>
 
               <div className="rounded-2xl border border-dashed border-[#D4813E]/40 bg-[#FFF9F3] p-4">
                 <label className="flex cursor-pointer items-center gap-3" htmlFor="product-image">
@@ -413,7 +382,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                   Deskripsi
                 </label>
                 <textarea 
-                  rows="3"
+                  rows="2"
                   value={data.description}
                   onChange={(e) => setData('description', e.target.value)}
                   placeholder="Catatan rasa & deskripsi kopi..."
@@ -421,7 +390,9 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                 />
               </div>
 
-              <div className="pt-4 flex gap-3">
+              </div>
+
+              <div className="flex flex-none gap-3 border-t border-[#2C1E16]/10 px-5 py-4 sm:px-6">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}

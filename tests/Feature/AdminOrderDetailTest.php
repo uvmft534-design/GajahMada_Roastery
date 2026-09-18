@@ -37,6 +37,7 @@ class AdminOrderDetailTest extends TestCase
             'product_id' => $firstProduct->product_id,
             'product_name' => 'Flores Arabica',
             'product_category' => 'Single Origin',
+            'weight_grams' => 1000,
             'qty' => 2,
             'unit_price' => 65000,
             'subtotal' => 130000,
@@ -48,6 +49,7 @@ class AdminOrderDetailTest extends TestCase
             'product_id' => $secondProduct->product_id,
             'product_name' => 'Toraja Arabica',
             'product_category' => 'House Blend',
+            'weight_grams' => 200,
             'qty' => 1,
             'unit_price' => 60000,
             'subtotal' => 60000,
@@ -66,6 +68,7 @@ class AdminOrderDetailTest extends TestCase
                 ->where('order.items.0.product_name', 'Flores Arabica')
                 ->where('order.items.0.product.image', 'products/flores.jpg')
                 ->where('order.items.0.product_category', 'Single Origin')
+                ->where('order.items.0.weight_grams', 1000)
                 ->where('order.items.0.qty', 2)
                 ->where('order.items.0.unit_price', 65000)
                 ->where('order.items.0.subtotal', 130000)
@@ -74,6 +77,7 @@ class AdminOrderDetailTest extends TestCase
                 ->missing('order.items.0.customer_note')
                 ->where('order.items.1.order_item_id', $secondItem->order_item_id)
                 ->where('order.items.1.product_name', 'Toraja Arabica')
+                ->where('order.items.1.weight_grams', 200)
                 ->where('order.items.1.unit_price', 60000)
                 ->where('order.items.1.subtotal', 60000)
                 ->where('order.items.1.brew_method', 'filter')

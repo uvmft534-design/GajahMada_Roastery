@@ -22,7 +22,7 @@ class HomeController extends Controller
     public function show($product_id)
     {
         // Langsung cari pakai product_id yang dikirim dari route
-        $product = Product::query()->withAvg('reviews', 'rating')->withCount('reviews')->where('product_id', $product_id)->first();
+        $product = Product::query()->withVariantSummary()->withAvg('reviews', 'rating')->withCount('reviews')->where('product_id', $product_id)->first();
 
         if (! $product) {
             abort(404, 'Produk tidak ditemukan.');
@@ -69,7 +69,7 @@ class HomeController extends Controller
         $selectedCategory = $categories->contains($selectedCategory) ? $selectedCategory : null;
 
         return [
-            'products' => Product::query()
+            'products' => Product::query()->withVariantSummary()
                 ->withAvg('reviews', 'rating')
                 ->withCount('reviews')
                 ->when($selectedCategory, fn ($query) => $query->where('category', $selectedCategory))

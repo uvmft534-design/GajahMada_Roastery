@@ -362,9 +362,9 @@ class CheckoutTest extends TestCase
         $second = Product::factory()->create(['price' => 200000, 'stock' => 10]);
         $third = Product::factory()->create(['price' => 50000, 'stock' => 10]);
         $cart = Cart::create(['user_id' => $user->id]);
-        $firstItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $first->product_id, 'qty' => 1, 'brew_method' => 'filter']);
-        $secondItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $second->product_id, 'qty' => 1, 'brew_method' => 'espresso']);
-        $unselectedItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $third->product_id, 'qty' => 1, 'brew_method' => 'filter']);
+        $firstItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $first->product_id, 'product_variant_id' => $first->variants()->sole()->id, 'qty' => 1, 'brew_method' => 'filter']);
+        $secondItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $second->product_id, 'product_variant_id' => $second->variants()->sole()->id, 'qty' => 1, 'brew_method' => 'espresso']);
+        $unselectedItem = CartItem::create(['cart_id' => $cart->id, 'product_id' => $third->product_id, 'product_variant_id' => $third->variants()->sole()->id, 'qty' => 1, 'brew_method' => 'filter']);
 
         $this->actingAs($user)->post(route('orders.store'), [
             'cart_item_ids' => [$firstItem->id, $secondItem->id],
@@ -382,8 +382,8 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseMissing('cart_items', ['id' => $firstItem->id]);
         $this->assertDatabaseMissing('cart_items', ['id' => $secondItem->id]);
         $this->assertDatabaseHas('cart_items', ['id' => $unselectedItem->id]);
-        $this->assertDatabaseHas('products', ['product_id' => $first->product_id, 'stock' => 9]);
-        $this->assertDatabaseHas('products', ['product_id' => $second->product_id, 'stock' => 9]);
+        $this->assertDatabaseHas('product_variants', ['id' => $first->variants()->sole()->id, 'stock' => 9]);
+        $this->assertDatabaseHas('product_variants', ['id' => $second->variants()->sole()->id, 'stock' => 9]);
     }
 
     private function checkout(array $overrides = [])
@@ -402,9 +402,11 @@ class CheckoutTest extends TestCase
         ]);
 
         $cart = Cart::create(['user_id' => $user->id]);
+        $variant = $product->variants()->create(['weight_grams' => 250, 'price' => 50000, 'stock' => 10]);
         $cartItem = CartItem::create([
             'cart_id' => $cart->id,
             'product_id' => $product->product_id,
+            'product_variant_id' => $variant->id,
             'qty' => 2,
             'brew_method' => $overrides['brew_method'] ?? 'filter',
         ]);

@@ -34,4 +34,32 @@ class Product extends Model
     {
         return $this->hasMany(ProductReview::class, 'product_id', 'product_id');
     }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id', 'product_id');
+    }
+
+    public function scopeWithVariantSummary($query)
+    {
+        return $query
+            ->with(['variants' => fn ($variants) => $variants->orderBy('weight_grams')])
+            ->addSelect([
+                'variant_stock_total' => ProductVariant::query()
+                    ->selectRaw('COALESCE(SUM(stock), 0)')
+                    ->whereColumn('product_id', 'products.product_id'),
+                'variant_price_from' => ProductVariant::query()
+                    ->selectRaw('MIN(price)')
+                    ->whereColumn('product_id', 'products.product_id')
+                    ->where('stock', '>', 0),
+            ]);
+    }
+
+    public function scopeWithLowVariantStock($query, int $threshold)
+    {
+        return $query->whereRaw(
+            '(SELECT COALESCE(SUM(stock), 0) FROM product_variants WHERE product_variants.product_id = products.product_id) <= ?',
+            [$threshold],
+        );
+    }
 }

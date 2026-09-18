@@ -68,6 +68,7 @@ export default function AdminOrderShow({ order }) {
                 </div>
                 <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                   <div><dt className="text-xs text-[#2C1E16]/55">Jumlah</dt><dd className="mt-1 font-semibold">{item.qty}</dd></div>
+                  {item.weight_grams && <div><dt className="text-xs text-[#2C1E16]/55">Berat</dt><dd className="mt-1 font-semibold">{Number(item.weight_grams) === 1000 ? '1kg' : `${item.weight_grams}g`}</dd></div>}
                   <div><dt className="text-xs text-[#2C1E16]/55">Harga satuan</dt><dd className="mt-1 font-semibold">{rupiah(item.unit_price)}</dd></div>
                   <div><dt className="text-xs text-[#2C1E16]/55">Subtotal</dt><dd className="mt-1 font-semibold">{rupiah(item.subtotal)}</dd></div>
                   {item.brew_method && <div><dt className="text-xs text-[#2C1E16]/55">Metode seduh</dt><dd className="mt-1 font-semibold">{item.brew_method === 'espresso' ? 'Espresso' : item.brew_method === 'filter' ? 'Filter' : item.brew_method}</dd></div>}

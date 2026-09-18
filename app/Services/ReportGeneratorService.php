@@ -69,9 +69,9 @@ class ReportGeneratorService
 
     private function inventory(): array
     {
-        $products = Product::query()->orderBy('product_id')->get(['product_id', 'product_name', 'stock']);
+        $products = Product::query()->withVariantSummary()->orderBy('product_id')->get(['product_id', 'product_name']);
 
-        return ['total_products' => $products->count(), 'total_stock_units' => (int) $products->sum('stock'), 'out_of_stock_products' => $products->where('stock', '<=', 0)->count(), 'low_stock_products' => $products->filter(fn ($product) => $product->stock > 0 && $product->stock <= self::LOW_STOCK_THRESHOLD)->count(), 'low_stock_threshold' => self::LOW_STOCK_THRESHOLD, 'products' => $products->map(fn ($product) => ['product_id' => $product->product_id, 'product_name' => $product->product_name, 'current_stock' => (int) $product->stock])->all()];
+        return ['total_products' => $products->count(), 'total_stock_units' => (int) $products->sum('variant_stock_total'), 'out_of_stock_products' => $products->where('variant_stock_total', '<=', 0)->count(), 'low_stock_products' => $products->filter(fn ($product) => $product->variant_stock_total > 0 && $product->variant_stock_total <= self::LOW_STOCK_THRESHOLD)->count(), 'low_stock_threshold' => self::LOW_STOCK_THRESHOLD, 'products' => $products->map(fn ($product) => ['product_id' => $product->product_id, 'product_name' => $product->product_name, 'current_stock' => (int) $product->variant_stock_total])->all()];
     }
 
     private function complaints(?string $start, ?string $end): array

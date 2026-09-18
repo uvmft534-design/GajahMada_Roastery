@@ -31,12 +31,13 @@ class OrderFulfillmentTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'customer']);
         $product = Product::create(['product_name' => 'Gayo', 'price' => 50000, 'stock' => 8]);
+        $variant = $product->variants()->create(['weight_grams' => 250, 'price' => 50000, 'stock' => 8]);
         $order = Order::factory()->create(['user_id' => $customer->id, 'status' => 'awaiting_payment', 'payment_status' => 'unpaid']);
-        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $product->product_id, 'product_name' => 'Gayo', 'qty' => 2, 'unit_price' => 50000, 'subtotal' => 100000]);
+        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $product->product_id, 'product_variant_id' => $variant->id, 'product_name' => 'Gayo', 'weight_grams' => 250, 'qty' => 2, 'unit_price' => 50000, 'subtotal' => 100000]);
         $this->actingAs($customer)->post(route('orders.cancel', $order))->assertRedirect();
         $this->assertDatabaseHas('orders', ['order_id' => $order->order_id, 'status' => 'cancelled']);
-        $this->assertSame(10, $product->fresh()->stock);
+        $this->assertSame(10, $variant->fresh()->stock);
         $this->actingAs($customer)->post(route('orders.cancel', $order))->assertStatus(422);
-        $this->assertSame(10, $product->fresh()->stock);
+        $this->assertSame(10, $variant->fresh()->stock);
     }
 }

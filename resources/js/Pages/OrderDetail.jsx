@@ -133,6 +133,7 @@ export default function OrderDetail({ order, items = [] }) {
                     <div>
                       <div className="font-bold text-sm">{item.product_name}</div>
                       <div className="text-xs text-[#2C1E16]/50 mt-1">Qty: {item.qty} • {item.product_category || 'Coffee'}</div>
+                      {item.weight_grams && <div className="mt-1 text-xs text-[#2C1E16]/60">Berat: {Number(item.weight_grams) === 1000 ? '1kg' : `${item.weight_grams}g`}</div>}
                       <div className="mt-1 text-xs text-[#2C1E16]/60">Metode seduh: {item.brew_method === 'espresso' ? 'Espresso' : item.brew_method === 'filter' ? 'Filter' : '—'}</div>
                       {item.item_note && <div className="mt-2 text-xs text-[#2C1E16]/70"><b>Catatan produk:</b> {item.item_note}</div>}
                       {order.status === 'completed' && (item.review ? <div className="mt-4 border-t border-[#2C1E16]/10 pt-4"><div className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Penilaian Anda</div><div className="mt-2 flex gap-1 text-[#D4813E]">{[1, 2, 3, 4, 5].map((rating) => <Star key={rating} size={17} fill={rating <= item.review.rating ? 'currentColor' : 'none'} />)}</div>{item.review.comment && <p className="mt-2 text-sm text-[#2C1E16]/70">{item.review.comment}</p>}</div> : <ReviewForm order={order} item={item} />)}

@@ -77,13 +77,15 @@ class CourierFulfillmentTest extends TestCase
         $order = Order::factory()->create(['courier_id' => $courier->id, 'status' => 'pickup_requested']);
         $first = Product::factory()->create();
         $second = Product::factory()->create();
-        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $first->product_id, 'product_name' => 'Gayo', 'qty' => 1, 'unit_price' => 50000, 'subtotal' => 50000, 'brew_method' => 'espresso']);
-        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $second->product_id, 'product_name' => 'Flores', 'qty' => 2, 'unit_price' => 50000, 'subtotal' => 100000, 'brew_method' => 'filter']);
+        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $first->product_id, 'product_name' => 'Gayo', 'weight_grams' => 200, 'qty' => 1, 'unit_price' => 50000, 'subtotal' => 50000, 'brew_method' => 'espresso']);
+        OrderItem::create(['order_id' => $order->order_id, 'product_id' => $second->product_id, 'product_name' => 'Flores', 'weight_grams' => 1000, 'qty' => 2, 'unit_price' => 50000, 'subtotal' => 100000, 'brew_method' => 'filter']);
 
         $this->actingAs($courier)->get(route('courier.dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('orders.0.items.0.brew_method', 'espresso')
-                ->where('orders.0.items.1.brew_method', 'filter'));
+                ->where('orders.0.items.0.weight_grams', 200)
+                ->where('orders.0.items.1.brew_method', 'filter')
+                ->where('orders.0.items.1.weight_grams', 1000));
     }
 
     public function test_courier_tracking_and_delivery_transitions_are_enforced(): void

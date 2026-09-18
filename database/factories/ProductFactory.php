@@ -19,4 +19,15 @@ class ProductFactory extends Factory
             'weight_grams' => 250,
         ];
     }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product): void {
+            $product->variants()->create([
+                'weight_grams' => $product->weight_grams ?: 250,
+                'price' => $product->price,
+                'stock' => $product->stock,
+            ]);
+        });
+    }
 }

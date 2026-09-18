@@ -19,6 +19,7 @@ const staggerContainer = {
     transition: { staggerChildren: 0.1 }
   }
 };
+const weightLabel = (weight) => Number(weight) === 1000 ? '1kg' : `${weight}g`;
 
 export default function Show() {
   const { product, auth, cartItemCount = 0 } = usePage().props;
@@ -35,7 +36,13 @@ export default function Show() {
     );
   }
 
+  const summaryPrice = product.variant_price_from ?? (product.variants?.length === 1 ? product.variants[0]?.price : null);
   const [qty, setQty] = useState(1);
+  const sellableVariants = (product.variants || []).filter((variant) => Number(variant.stock) > 0);
+  const [selectedVariantId, setSelectedVariantId] = useState(() => sellableVariants.length === 1 ? sellableVariants[0].id : null);
+  const selectedVariant = product.variants?.find((variant) => Number(variant.id) === Number(selectedVariantId));
+  const displayedPrice = selectedVariant?.price ?? summaryPrice;
+  const displayedStock = selectedVariant?.stock ?? product.variant_stock_total ?? 0;
   const [isWishlisted, setIsWishlisted] = useState(() => hasWishlisted(product.product_id));
   const [isAdding, setIsAdding] = useState(false);
   const [cartFeedback, setCartFeedback] = useState('');
@@ -55,7 +62,7 @@ export default function Show() {
 
   const handleQtyChange = (type) => {
     if (type === 'min' && qty > 1) setQty(qty - 1);
-    if (type === 'plus' && qty < (product.stock || 99)) setQty(qty + 1);
+    if (type === 'plus' && selectedVariant && qty < selectedVariant.stock) setQty(qty + 1);
   };
 
   const animateProductTo = (targetRef) => {
@@ -83,7 +90,7 @@ export default function Show() {
       return;
     }
 
-    if (isAdding || Number(product.stock) < 1) return;
+    if (isAdding || !selectedVariantId) return;
 
     const reduceMotion = animateProductTo(cartButtonRef);
 
@@ -91,7 +98,7 @@ export default function Show() {
     setCartFeedback(`${qty} produk sedang dimasukkan ke keranjang.`);
 
     addToCartTimerRef.current = window.setTimeout(() => {
-      router.post(route('cart.store', product.product_id), { qty, stay_on_product: true }, {
+      router.post(route('cart.store', product.product_id), { qty, product_variant_id: selectedVariantId, stay_on_product: true }, {
         preserveScroll: true,
         onSuccess: () => {
           setIsAdding(false);
@@ -209,9 +216,7 @@ export default function Show() {
               </div>
               {/* SESUAIKAN JADI product_name */}
               <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-[#2C1E16]">{product.product_name}</h1>
-              <div className="text-3xl font-extrabold text-[#D4813E]">
-                Rp {Number(product.price || 0).toLocaleString('id-ID')}
-              </div>
+              <div className="text-3xl font-extrabold text-[#D4813E]">{displayedPrice ? <>{!selectedVariant && product.variants?.length > 1 && 'Mulai '}Rp {Number(displayedPrice).toLocaleString('id-ID')}</> : 'Belum tersedia'}</div>
             </motion.div>
 
             <motion.div variants={fadeInUp} className="mb-8">
@@ -231,12 +236,12 @@ export default function Show() {
               <div>
                 <div className="text-xs text-[#2C1E16]/50 mb-1 uppercase tracking-wider font-bold">Stok</div>
                 <div className="font-medium flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-green-600" /> {product.stock ?? 0} Pcs
+                  <CheckCircle2 size={16} className={Number(displayedStock) > 0 ? 'text-green-600' : 'text-red-600'} /> {displayedStock} Pcs
                 </div>
               </div>
             </motion.div>
 
-            <motion.div variants={fadeInUp} className="mb-6 flex flex-col gap-3">
+            <motion.div variants={fadeInUp} className="mb-6 flex flex-col gap-3"><div className="rounded-2xl border border-[#2C1E16]/10 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Pilih berat</p><div className="mt-3 flex flex-col items-start gap-2">{product.variants?.map((variant) => { const available = Number(variant.stock) > 0; const selected = Number(selectedVariantId) === Number(variant.id); return <label key={variant.id} className={`inline-flex items-center gap-2 text-sm transition ${selected ? 'text-[#D4813E]' : 'text-[#2C1E16]'} ${available ? 'cursor-pointer hover:text-[#D4813E]' : 'cursor-not-allowed opacity-50'}`}><input type="radio" name="product-variant" value={variant.id} checked={selected} disabled={!available} onChange={() => { setSelectedVariantId(variant.id); setQty((current) => Math.min(current, variant.stock)); }} className="h-4 w-4 accent-[#D4813E]" /><span className="font-bold">{weightLabel(variant.weight_grams)}</span></label>; })}</div>{sellableVariants.length > 1 && !selectedVariantId && <p className="mt-3 text-xs font-medium text-[#D4813E]">Pilih berat kopi sebelum memasukkan produk ke keranjang.</p>}</div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="flex h-14 w-full items-center justify-between rounded-2xl border border-[#2C1E16]/15 bg-white px-3 sm:w-auto sm:min-w-[190px]">
                   <span className="text-sm font-medium text-[#2C1E16]/55">Jumlah</span>
@@ -254,11 +259,11 @@ export default function Show() {
                 <motion.button 
                   whileTap={{ scale: 0.98 }}
                   onClick={handleAddToCart}
-                  disabled={isAdding || Number(product.stock) < 1}
+                  disabled={isAdding || !selectedVariantId}
                   aria-busy={isAdding}
                   className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#2C1E16] px-6 text-base font-bold text-[#FDFBF7] shadow-lg shadow-[#2C1E16]/10 transition-colors hover:bg-[#D4813E] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
                 >
-                  <ShoppingBag size={21} /> <span>{Number(product.stock) < 1 ? 'Stok Habis' : isAdding ? 'Menambahkan…' : 'Masukkan ke Keranjang'}</span>
+                  <ShoppingBag size={21} /> <span>{sellableVariants.length === 0 ? 'Stok Habis' : isAdding ? 'Menambahkan…' : !selectedVariantId ? 'Pilih Berat Dahulu' : 'Masukkan ke Keranjang'}</span>
                 </motion.button>
               </div>
 

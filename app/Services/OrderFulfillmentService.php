@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -28,9 +28,21 @@ class OrderFulfillmentService
             $order = Order::with('items')->lockForUpdate()->findOrFail($order->order_id);
             abort_unless($order->status === 'awaiting_payment' && in_array($order->payment_status, ['unpaid', 'rejected'], true), 422, 'Pesanan yang sudah dibayar atau sedang diverifikasi tidak dapat dibatalkan melalui flow ini.');
             if (! $order->stock_released_at) {
-                foreach ($order->items as $item) {
-                    if ($item->product_id) {
-                        Product::where('product_id', $item->product_id)->lockForUpdate()->increment('stock', $item->qty);
+                $restockByVariant = $order->items
+                    ->filter(fn ($item) => $item->product_variant_id)
+                    ->groupBy('product_variant_id')
+                    ->map(fn ($items) => $items->sum('qty'));
+
+                $variants = ProductVariant::query()
+                    ->whereIn('id', $restockByVariant->keys())
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($restockByVariant as $variantId => $qty) {
+                    if ($variant = $variants->get($variantId)) {
+                        $variant->increment('stock', $qty);
                     }
                 }
             } $order->update(['status' => 'cancelled', 'stock_released_at' => now()]);

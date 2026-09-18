@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ShippingMethod;
 use App\Models\User;
 use App\Services\OrderFulfillmentService;
@@ -30,7 +31,7 @@ class OrderController extends Controller
         ]);
 
         $items = CartItem::query()
-            ->with('product')
+            ->with(['product.variants', 'variant'])
             ->whereIn('id', $validated['items'])
             ->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))
             ->get();
@@ -134,27 +135,57 @@ class OrderController extends Controller
                 ]);
             }
 
-            // Lock every product in a stable order before checking stock or creating the order.
+            if ($cartItems->contains(fn (CartItem $item) => ! $item->product_variant_id)) {
+                throw ValidationException::withMessages([
+                    'cart_item_ids' => 'Pilih berat kopi untuk setiap produk sebelum checkout.',
+                ]);
+            }
+
+            $requiredQtyByVariant = $cartItems->groupBy('product_variant_id')
+                ->map(fn ($items) => $items->sum('qty'));
+
+            // Lock each selected variant in deterministic order before validating price or stock.
+            $variants = ProductVariant::query()
+                ->whereIn('id', $requiredQtyByVariant->keys())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($variants->count() !== $requiredQtyByVariant->count()) {
+                throw ValidationException::withMessages([
+                    'cart_item_ids' => 'Varian berat produk tidak lagi tersedia. Silakan kembali ke keranjang.',
+                ]);
+            }
+
             $products = Product::query()
                 ->whereIn('product_id', $cartItems->pluck('product_id')->unique())
-                ->orderBy('product_id')
-                ->lockForUpdate()
                 ->get()
                 ->keyBy('product_id');
 
             $subtotal = 0;
             foreach ($cartItems as $cartItem) {
+                $variant = $variants->get($cartItem->product_variant_id);
                 $product = $products->get($cartItem->product_id);
 
-                if (! $product || $cartItem->qty > $product->stock) {
+                if (! $product || ! $variant || $variant->product_id !== $cartItem->product_id) {
                     $productName = $product?->product_name ?? 'produk';
 
                     throw ValidationException::withMessages([
-                        'cart_item_ids' => "Stok {$productName} tidak mencukupi.",
+                        'cart_item_ids' => "Varian {$productName} tidak valid.",
                     ]);
                 }
 
-                $subtotal += (int) $product->price * $cartItem->qty;
+                $subtotal += (int) $variant->price * $cartItem->qty;
+            }
+
+            foreach ($requiredQtyByVariant as $variantId => $requiredQty) {
+                $variant = $variants->get($variantId);
+                if ($requiredQty > $variant->stock) {
+                    throw ValidationException::withMessages([
+                        'cart_item_ids' => "Stok berat {$variant->weight_grams}g tidak mencukupi.",
+                    ]);
+                }
             }
 
             $shippingMethod = ShippingMethod::query()
@@ -194,21 +225,26 @@ class OrderController extends Controller
 
             foreach ($cartItems as $cartItem) {
                 $product = $products->get($cartItem->product_id);
-                $itemSubtotal = (int) $product->price * $cartItem->qty;
+                $variant = $variants->get($cartItem->product_variant_id);
+                $itemSubtotal = (int) $variant->price * $cartItem->qty;
 
                 OrderItem::create([
                     'order_id' => $order->order_id,
                     'product_id' => $product->product_id,
+                    'product_variant_id' => $variant->id,
                     'product_name' => $product->product_name,
                     'product_category' => $product->category,
+                    'weight_grams' => $variant->weight_grams,
                     'qty' => $cartItem->qty,
-                    'unit_price' => (int) $product->price,
+                    'unit_price' => (int) $variant->price,
                     'subtotal' => $itemSubtotal,
                     'brew_method' => $cartItem->brew_method,
                     'item_note' => $validated['item_notes'][$cartItem->id] ?? null,
                 ]);
+            }
 
-                $product->decrement('stock', $cartItem->qty);
+            foreach ($requiredQtyByVariant as $variantId => $requiredQty) {
+                $variants->get($variantId)->decrement('stock', $requiredQty);
             }
 
             CartItem::query()->whereIn('id', $cartItems->pluck('id'))->delete();
@@ -333,7 +369,7 @@ class OrderController extends Controller
             'attention' => [
                 'paymentConfirmation' => Order::query()->where('payment_status', 'pending_confirmation')->count(),
                 'readyToProcess' => Order::query()->where('status', 'awaiting_payment')->where('payment_status', 'paid')->count(),
-                'lowStock' => Product::query()->where('stock', '<=', 5)->count(),
+                'lowStock' => Product::query()->withLowVariantStock(5)->count(),
             ],
             'revenueAnalytics' => $dashboardRevenueAnalytics,
         ]);

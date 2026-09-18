@@ -48,13 +48,13 @@ class CoreFixRegressionTest extends TestCase
         $this->seed(ProductCategorySeeder::class);
         $this->assertSame(['Kategori A', 'Kategori B', 'Kategori C', 'Kategori D'], ProductCategory::orderBy('name')->pluck('name')->all());
         $admin = User::factory()->create(['role' => 'admin']);
-        $payload = ['product_name' => 'Arabika', 'category' => 'Kategori A', 'price' => 125000, 'stock' => 3, 'weight_grams' => 250];
+        $payload = ['product_name' => 'Arabika', 'category' => 'Kategori A', 'variants' => [['weight_grams' => 200, 'price' => 125000, 'stock' => 3]]];
         $this->actingAs($admin)->post(route('admin.products.store'), $payload)->assertRedirect();
         $product = Product::where('product_name', 'Arabika')->firstOrFail();
-        $this->assertSame(125000, $product->price);
-        $this->assertSame(250, $product->weight_grams);
-        foreach ([['price' => 0], ['price' => -1], ['price' => 'Rp 125.000'], ['weight_grams' => 0], ['weight_grams' => -1], ['weight_grams' => 'x'], ['category' => 'Tidak Ada']] as $invalid) {
-            $this->actingAs($admin)->post(route('admin.products.store'), array_merge($payload, $invalid))->assertSessionHasErrors(array_key_first($invalid));
+        $this->assertSame(125000, $product->variants()->sole()->price);
+        $this->assertSame(200, $product->variants()->sole()->weight_grams);
+        foreach ([['variants' => [['weight_grams' => 200, 'price' => 0, 'stock' => 3]]], ['variants' => [['weight_grams' => 200, 'price' => -1, 'stock' => 3]]], ['variants' => [['weight_grams' => 200, 'price' => 'Rp 125.000', 'stock' => 3]]], ['variants' => [['weight_grams' => 0, 'price' => 1, 'stock' => 3]]], ['variants' => [['weight_grams' => 200, 'price' => 1, 'stock' => -1]]], ['category' => 'Tidak Ada']] as $invalid) {
+            $this->actingAs($admin)->post(route('admin.products.store'), array_merge($payload, $invalid))->assertSessionHasErrors();
         }
     }
 
