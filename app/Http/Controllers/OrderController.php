@@ -70,6 +70,7 @@ class OrderController extends Controller
             'street_name' => 'nullable|string|max:255',
             'house_number' => 'nullable|string|max:50',
             'address_detail' => 'nullable|string|max:500',
+            'address_details_applied' => 'nullable|boolean',
             'customer_note' => 'nullable|string|max:500',
             'item_notes' => 'nullable|array',
             'item_notes.*' => 'nullable|string|max:500',
@@ -95,7 +96,7 @@ class OrderController extends Controller
         }
 
         $customerAddress = $validated['customer_address'];
-        if ($requiresAddressDetails || $hasCoordinates) {
+        if (($requiresAddressDetails || $hasCoordinates) && ! ($validated['address_details_applied'] ?? false)) {
             $addressParts = [];
 
             if (filled($validated['street_name'] ?? null) || filled($validated['house_number'] ?? null)) {
@@ -361,6 +362,20 @@ class OrderController extends Controller
             'orders' => $query->paginate(15)->withQueryString(),
             'filters' => $filters,
             'couriers' => User::query()->where('role', 'courier')->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    public function adminShow(Order $order)
+    {
+        $order->load([
+            'items.product:product_id,image',
+            'items' => fn ($query) => $query->orderBy('order_item_id'),
+            'user:id,name,email',
+            'courier:id,name',
+        ]);
+
+        return Inertia::render('Admin/Orders/Show', [
+            'order' => $order,
         ]);
     }
 

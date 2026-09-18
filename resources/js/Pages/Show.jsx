@@ -236,16 +236,16 @@ export default function Show() {
               </div>
             </motion.div>
 
-            <motion.div variants={fadeInUp} className="flex flex-col gap-4 mb-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between border border-[#2C1E16]/15 rounded-2xl h-14 px-4 sm:w-40 bg-white">
+            <motion.div variants={fadeInUp} className="mb-6 flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex h-14 w-full items-center justify-between rounded-2xl border border-[#2C1E16]/15 bg-white px-3 sm:w-auto sm:min-w-[190px]">
                   <span className="text-sm font-medium text-[#2C1E16]/55">Jumlah</span>
-                  <div className="flex items-center gap-4">
-                  <button onClick={() => handleQtyChange('min')} className="hover:text-[#D4813E]">
+                  <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => handleQtyChange('min')} aria-label="Kurangi jumlah" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
                     <Minus size={18} />
                   </button>
-                  <AnimatePresence mode="popLayout"><motion.span key={qty} initial={{ opacity: 0, scale: 0.65, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.65 }} transition={{ type: 'spring', stiffness: 420, damping: 22 }} className="font-bold text-lg w-8 text-center">{qty}</motion.span></AnimatePresence>
-                  <button onClick={() => handleQtyChange('plus')} className="hover:text-[#D4813E]">
+                  <AnimatePresence mode="popLayout"><motion.span key={qty} initial={{ opacity: 0, scale: 0.65, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.65 }} transition={{ type: 'spring', stiffness: 420, damping: 22 }} className="w-8 text-center text-lg font-bold">{qty}</motion.span></AnimatePresence>
+                  <button type="button" onClick={() => handleQtyChange('plus')} aria-label="Tambah jumlah" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
                     <Plus size={18} />
                   </button>
                   </div>
@@ -256,16 +256,15 @@ export default function Show() {
                   onClick={handleAddToCart}
                   disabled={isAdding || Number(product.stock) < 1}
                   aria-busy={isAdding}
-                  className="w-full min-h-16 bg-[#2C1E16] text-[#FDFBF7] rounded-2xl px-6 flex items-center justify-center gap-3 font-bold text-base hover:bg-[#D4813E] transition-colors shadow-lg shadow-[#2C1E16]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#2C1E16] px-6 text-base font-bold text-[#FDFBF7] shadow-lg shadow-[#2C1E16]/10 transition-colors hover:bg-[#D4813E] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
                 >
                   <ShoppingBag size={21} /> <span>{Number(product.stock) < 1 ? 'Stok Habis' : isAdding ? 'Menambahkan…' : 'Masukkan ke Keranjang'}</span>
                 </motion.button>
-                <p aria-live="polite" className="min-h-5 text-center text-sm font-medium text-[#D4813E]">
-                  {cartFeedback}
-                </p>
               </div>
 
-              <Link href={auth?.user ? route('cart.index') : route('login')} className="w-full bg-[#D4813E] text-white rounded-full h-14 font-bold shadow-lg shadow-[#D4813E]/30 hover:bg-[#b86b30] transition-colors grid place-items-center">
+              {cartFeedback && <p aria-live="polite" className="-mt-1 text-center text-sm font-medium text-[#D4813E]">{cartFeedback}</p>}
+
+              <Link href={auth?.user ? route('cart.index') : route('login')} className="grid h-14 w-full place-items-center rounded-2xl bg-[#D4813E] font-bold text-white shadow-lg shadow-[#D4813E]/30 transition-colors hover:bg-[#b86b30]">
                 Lihat Keranjang
               </Link>
             </motion.div>

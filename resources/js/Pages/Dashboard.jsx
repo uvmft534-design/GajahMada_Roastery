@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Search, ShoppingBag, User, ArrowRight, Star, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { getWishlist, toggleWishlist } from '../utils/wishlist';
@@ -53,6 +53,8 @@ const staggerContainerSlow = {
     transition: { staggerChildren: 0.12, delayChildren: 0.08 }
   }
 };
+
+const brewCardTransition = { duration: 0.58, ease: [0.22, 1, 0.36, 1] };
 
 export default function Dashboard() {
   const { auth, products = [], categories = [], selectedCategory = null, cartItemCount = 0 } = usePage().props;
@@ -364,7 +366,7 @@ export default function Dashboard() {
 
           {filteredProducts.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-3xl border border-[#2C1E16]/10">
-              <p className="text-[#2C1E16]/60 text-base font-medium">{searchQuery ? 'Produk tidak ditemukan. Coba kata kunci lain.' : 'Belum ada produk yang ditambahkan di admin dashboard.'}</p>
+              <p className="text-[#2C1E16]/60 text-base font-medium">{searchQuery ? 'Produk tidak ditemukan. Coba kata kunci lain.' : 'Belum ada produk yang tersedia'}</p>
             </div>
           ) : (
             <motion.div 
@@ -431,14 +433,14 @@ export default function Dashboard() {
             <h2 className="text-4xl md:text-5xl font-bold mb-4">Pilih Gaya Seduhmu</h2>
             <p className="text-[#2C1E16]/60">Koleksi kami dirancang khusus untuk memenuhi preferensi brewing Anda.</p>
           </motion.div>
-          <motion.div initial="hidden" whileInView="visible" viewport={scrollConfig} variants={slideInRight} className="flex flex-col md:flex-row h-[500px] gap-4 w-full">
+          <MotionConfig transition={brewCardTransition}><motion.div initial="hidden" whileInView="visible" viewport={scrollConfig} variants={slideInRight} className="flex flex-col md:flex-row h-[500px] gap-4 w-full">
             <motion.div onMouseEnter={() => setHoveredCategory('espresso')} onMouseLeave={() => setHoveredCategory(null)} animate={{ flex: hoveredCategory === 'espresso' ? 2 : hoveredCategory === 'filter' ? 0.8 : 1 }} className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-300">
-              <div className="absolute inset-0 bg-[#2C1E16]/40 z-10 group-hover:bg-[#2C1E16]/20 transition-colors duration-500"></div><img src="/images/category-espresso.jpg" alt="Kategori Espresso" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent"><h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Espresso Roast</h3><p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p><Link href={route('collections.espresso')} className="mt-4 inline-flex bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors">Lihat Koleksi</Link></div>
+              <div className="absolute inset-0 bg-[#2C1E16]/40 z-10 group-hover:bg-[#2C1E16]/20 transition-colors duration-500"></div><img src="/images/category-espresso.jpg" alt="Kategori Espresso" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 sm:p-8"><h3 className="mb-0 text-2xl font-bold text-white transition-transform duration-300 group-hover:-translate-y-2 sm:text-3xl">Espresso Roast</h3><p className="mt-3 max-w-md translate-y-0 text-sm leading-6 text-white/80 opacity-100 transition-all duration-500 md:translate-y-4 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p><Link href={route('collections.espresso')} className="mt-5 inline-flex rounded-full bg-[#D4813E] px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-white hover:text-[#2C1E16]">Lihat Koleksi</Link></div>
             </motion.div>
             <motion.div onMouseEnter={() => setHoveredCategory('filter')} onMouseLeave={() => setHoveredCategory(null)} animate={{ flex: hoveredCategory === 'filter' ? 2 : hoveredCategory === 'espresso' ? 0.8 : 1 }} className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-200">
-              <div className="absolute inset-0 bg-[#D4813E]/40 z-10 group-hover:bg-[#D4813E]/20 transition-colors duration-500"></div><img src="/images/category-filter.jpg" alt="Kategori Filter" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent"><h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Filter Roast</h3><p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p><Link href={route('collections.filter')} className="mt-4 inline-flex bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors">Lihat Koleksi</Link></div>
+              <div className="absolute inset-0 bg-[#D4813E]/40 z-10 group-hover:bg-[#D4813E]/20 transition-colors duration-500"></div><img src="/images/category-filter.jpg" alt="Kategori Filter" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/><div className="absolute bottom-0 left-0 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 sm:p-8"><h3 className="mb-0 text-2xl font-bold text-white transition-transform duration-300 group-hover:-translate-y-2 sm:text-3xl">Filter Roast</h3><p className="mt-3 max-w-md translate-y-0 text-sm leading-6 text-white/80 opacity-100 transition-all duration-500 md:translate-y-4 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p><Link href={route('collections.filter')} className="mt-5 inline-flex rounded-full bg-[#D4813E] px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-white hover:text-[#2C1E16]">Lihat Koleksi</Link></div>
             </motion.div>
-          </motion.div>
+          </motion.div></MotionConfig>
         </section>
 
         {/* SECTION 5: KEBIJAKAN & CATATAN TOKO */}

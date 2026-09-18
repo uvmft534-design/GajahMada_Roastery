@@ -61,6 +61,8 @@ const productCardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } },
 };
 
+const brewCardTransition = { duration: 0.58, ease: [0.22, 1, 0.36, 1] };
+
 export default function App({ products = [], categories = [], selectedCategory = null }) {
   const { auth, cartItemCount = 0 } = usePage().props;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -265,7 +267,7 @@ export default function App({ products = [], categories = [], selectedCategory =
             variants={staggerContainer}
           >
             <motion.div variants={slideInLeft} className="inline-block bg-[#2C1E16] text-[#FDFBF7] px-4 py-1.5 rounded-full text-xs font-bold tracking-widest mb-6 uppercase">
-              Est. 2024
+              Est. 2020
             </motion.div>
             <motion.h1 
               variants={slideInLeft}
@@ -359,6 +361,20 @@ export default function App({ products = [], categories = [], selectedCategory =
               <h2 className="inline-block text-4xl md:text-5xl font-bold mb-3 transition-colors duration-300 hover:text-[#D4813E]">Products</h2>
               <p className="text-[#2C1E16]/60">Temukan biji kopi pilihan langsung dari database kami.</p>
             </motion.div>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={scrollConfig}
+              variants={slideInRight}
+              className="flex gap-2"
+            >
+              <button type="button" aria-label="Produk sebelumnya" className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2C1E16]/20 transition-colors hover:bg-[#2C1E16] hover:text-white">
+                <ChevronRight className="rotate-180" size={20} />
+              </button>
+              <button type="button" aria-label="Produk berikutnya" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/30 transition-colors hover:bg-[#b86b30]">
+                <ChevronRight size={20} />
+              </button>
+            </motion.div>
           </div>
 
           <div className="mb-8 flex flex-wrap items-center justify-center gap-2 md:justify-start" aria-label="Filter kategori produk">
@@ -373,7 +389,7 @@ export default function App({ products = [], categories = [], selectedCategory =
             >
               <ImageIcon size={48} className="mx-auto text-[#D4813E]/40 mb-4 animate-bounce" />
               <h3 className="font-bold text-xl text-[#2C1E16] mb-2">{searchQuery ? 'Produk tidak ditemukan' : 'Belum Ada Produk'}</h3>
-              <p className="text-sm text-[#2C1E16]/60">{searchQuery ? 'Coba gunakan kata kunci lain.' : 'Silakan tambahkan data produk melalui panel admin database terlebih dahulu ya! ☕️'}</p>
+              <p className="text-sm text-[#2C1E16]/60">{searchQuery ? 'Coba gunakan kata kunci lain.' : 'Belum ada produk yang tersedia'}</p>
             </motion.div>
           ) : (
             <motion.div 
@@ -472,7 +488,9 @@ export default function App({ products = [], categories = [], selectedCategory =
               animate={{ 
                 flex: hoveredCategory === 'espresso' ? 2 : hoveredCategory === 'filter' ? 0.8 : 1 
               }}
-              className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-300"
+              transition={brewCardTransition}
+              style={{ willChange: 'flex' }}
+              className="relative min-h-[200px] flex-1 cursor-pointer overflow-hidden rounded-3xl bg-gray-300 group"
             >
               <div className="absolute inset-0 bg-[#2C1E16]/40 z-10 group-hover:bg-[#2C1E16]/20 transition-colors duration-500"></div>
               <img 
@@ -480,12 +498,12 @@ export default function App({ products = [], categories = [], selectedCategory =
                 alt="Kategori Espresso" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Espresso Roast</h3>
-                <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p>
+              <div className="absolute bottom-0 left-0 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 sm:p-8">
+                <h3 className="mb-0 text-2xl font-bold text-white transition-transform duration-300 group-hover:-translate-y-2 sm:text-3xl">Espresso Roast</h3>
+                <p className="mt-3 max-w-md translate-y-0 text-sm leading-6 text-white/80 opacity-100 transition-all duration-500 md:translate-y-4 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100">Profil sangrai medium-dark yang menghasilkan body tebal, manis karamel, dan crema yang sempurna untuk paduan susu.</p>
                 <Link
                   href={route('collections.espresso')}
-                  className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
+                  className="mt-5 inline-flex rounded-full bg-[#D4813E] px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-white hover:text-[#2C1E16]"
                 >
                   Lihat Koleksi
                 </Link>
@@ -498,7 +516,9 @@ export default function App({ products = [], categories = [], selectedCategory =
               animate={{ 
                 flex: hoveredCategory === 'filter' ? 2 : hoveredCategory === 'espresso' ? 0.8 : 1 
               }}
-              className="relative rounded-3xl overflow-hidden cursor-pointer group flex-1 transition-all duration-500 ease-out min-h-[200px] bg-gray-200"
+              transition={brewCardTransition}
+              style={{ willChange: 'flex' }}
+              className="relative min-h-[200px] flex-1 cursor-pointer overflow-hidden rounded-3xl bg-gray-200 group"
             >
               <div className="absolute inset-0 bg-[#D4813E]/40 z-10 group-hover:bg-[#D4813E]/20 transition-colors duration-500"></div>
               <img 
@@ -506,12 +526,12 @@ export default function App({ products = [], categories = [], selectedCategory =
                 alt="Kategori Filter" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              <div className="absolute bottom-0 left-0 p-8 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                <h3 className="text-3xl font-bold text-white mb-2 transform group-hover:-translate-y-2 transition-transform duration-300">Filter Roast</h3>
-                <p className="text-white/80 text-sm max-w-md hidden md:block opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p>
+              <div className="absolute bottom-0 left-0 z-20 w-full bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 sm:p-8">
+                <h3 className="mb-0 text-2xl font-bold text-white transition-transform duration-300 group-hover:-translate-y-2 sm:text-3xl">Filter Roast</h3>
+                <p className="mt-3 max-w-md translate-y-0 text-sm leading-6 text-white/80 opacity-100 transition-all duration-500 md:translate-y-4 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100">Profil sangrai light-medium untuk menonjolkan acidity yang cerah, aroma floral, dan sensasi fruity yang kompleks.</p>
                 <Link
                   href={route('collections.filter')}
-                  className="mt-4 bg-[#D4813E] text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-white hover:text-[#2C1E16] transition-colors"
+                  className="mt-5 inline-flex rounded-full bg-[#D4813E] px-6 py-2 text-sm font-bold text-white transition-colors hover:bg-white hover:text-[#2C1E16]"
                 >
                   Lihat Koleksi
                 </Link>

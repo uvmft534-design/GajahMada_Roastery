@@ -61,16 +61,33 @@ class CartTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('cartItemCount', 2));
     }
 
+    public function test_cart_page_includes_the_product_category_from_the_database(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $product = Product::factory()->create(['category' => 'House Blend']);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 1, 'brew_method' => 'espresso']);
+
+        $this->actingAs($customer)->get(route('cart.index'))
+            ->assertInertia(fn ($page) => $page
+                ->component('Cart/Index')
+                ->where('items.0.product.category', 'House Blend')
+                ->where('items.0.brew_method', 'espresso'));
+    }
+
     public function test_customer_can_only_open_checkout_with_their_own_selected_cart_items(): void
     {
         $owner = User::factory()->create(['role' => 'customer']);
         $other = User::factory()->create(['role' => 'customer']);
-        $product = Product::factory()->create();
+        $product = Product::factory()->create(['category' => 'Single Origin']);
         $cart = Cart::create(['user_id' => $owner->id]);
         $item = CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->product_id, 'qty' => 1, 'brew_method' => 'filter']);
 
         $this->actingAs($owner)->get(route('checkout', ['items' => [$item->id]]))
-            ->assertInertia(fn ($page) => $page->component('Checkout')->where('items.0.id', $item->id));
+            ->assertInertia(fn ($page) => $page
+                ->component('Checkout')
+                ->where('items.0.id', $item->id)
+                ->where('items.0.product.category', 'Single Origin'));
         $this->actingAs($other)->get(route('checkout', ['items' => [$item->id]]))->assertForbidden();
     }
 

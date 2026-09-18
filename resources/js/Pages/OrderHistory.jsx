@@ -78,7 +78,7 @@ export default function OrderHistory({ orders = [] }) {
                   <div className="mt-4 text-xs text-[#2C1E16]/60">
                     {order.items?.map((item) => (
                       <span key={item.order_item_id} className="inline-flex items-center gap-2 mr-4">
-                        <span className="w-2 h-2 rounded-full bg-[#D4813E]" /> {item.product_name} x {item.qty}{item.item_note && <small>· Catatan produk: {item.item_note}</small>}
+                        <span className="w-2 h-2 rounded-full bg-[#D4813E]" /> {item.product_name} x {item.qty}<small>· Metode seduh: {item.brew_method === 'espresso' ? 'Espresso' : 'Filter'}</small>{item.item_note && <small>· Catatan produk: {item.item_note}</small>}
                       </span>
                     ))}
                   </div>
