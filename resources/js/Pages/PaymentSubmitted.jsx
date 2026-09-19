@@ -3,13 +3,10 @@ import { Head, Link } from '@inertiajs/react';
 import { CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { orderStatusLabel } from '../utils/orderStatus';
+import { formatRupiah } from '../utils/currency';
 
 export default function PaymentSubmitted({ order }) {
-  const money = new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0,
-  });
+  const money = { format: formatRupiah };
   const orderStatus = order.status === 'awaiting_payment' ? 'Menunggu Konfirmasi Pembayaran' : orderStatusLabel(order.status);
 
   return (

@@ -2,8 +2,9 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, LoaderCircle, LocateFixed, MapPin, Pencil, Phone, ShoppingBag, Truck, X, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
+import { formatRupiah } from '../utils/currency';
 
-const rupiah = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+const rupiah = formatRupiah;
 const formattedPhone = (phone = '') => {
     const digits = String(phone).replace(/\D/g, '');
     const localDigits = digits.startsWith('62') ? digits.slice(2) : digits.replace(/^0+/, '');

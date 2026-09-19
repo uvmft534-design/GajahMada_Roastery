@@ -2,14 +2,12 @@ import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PackageCheck, Truck, CalendarDays, ArrowRight } from 'lucide-react';
 import { orderStatusLabel } from '../utils/orderStatus';
+import { formatRupiah } from '../utils/currency';
+import { formatWeightGrams } from '../utils/productFormat';
 
 export default function OrderHistory({ orders = [] }) {
   const { flash = {} } = usePage().props;
-  const money = new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0,
-  });
+  const money = { format: formatRupiah };
   const paymentStatusLabel = (status) => ({
     unpaid: 'Menunggu pembayaran',
     pending_confirmation: 'Pembayaran sedang diverifikasi',
@@ -78,7 +76,7 @@ export default function OrderHistory({ orders = [] }) {
                   <div className="mt-4 text-xs text-[#2C1E16]/60">
                     {order.items?.map((item) => (
                       <span key={item.order_item_id} className="inline-flex items-center gap-2 mr-4">
-                        <span className="w-2 h-2 rounded-full bg-[#D4813E]" /> {item.product_name} x {item.qty}{item.weight_grams && <small>· Berat: {Number(item.weight_grams) === 1000 ? '1kg' : `${item.weight_grams}g`}</small>}<small>· Metode seduh: {item.brew_method === 'espresso' ? 'Espresso' : 'Filter'}</small>{item.item_note && <small>· Catatan produk: {item.item_note}</small>}
+                        <span className="w-2 h-2 rounded-full bg-[#D4813E]" /> {item.product_name} x {item.qty}{item.weight_grams && <small>· Berat: {formatWeightGrams(item.weight_grams)}</small>}<small>· Metode seduh: {item.brew_method === 'espresso' ? 'Espresso' : 'Filter'}</small>{item.item_note && <small>· Catatan produk: {item.item_note}</small>}
                       </span>
                     ))}
                   </div>

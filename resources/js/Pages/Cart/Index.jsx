@@ -2,8 +2,9 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { formatRupiah } from '../../utils/currency';
 
-const rupiah = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+const rupiah = formatRupiah;
 
 export default function CartIndex({ items }) {
   const { flash } = usePage().props;

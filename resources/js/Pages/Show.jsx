@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { hasWishlisted, toggleWishlist } from '../utils/wishlist';
+import { formatRupiah } from '../utils/currency';
+import { formatWeightGrams } from '../utils/productFormat';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 40 },
@@ -19,7 +21,7 @@ const staggerContainer = {
     transition: { staggerChildren: 0.1 }
   }
 };
-const weightLabel = (weight) => Number(weight) === 1000 ? '1kg' : `${weight}g`;
+const weightLabel = formatWeightGrams;
 
 export default function Show() {
   const { product, auth, cartItemCount = 0 } = usePage().props;
@@ -216,7 +218,7 @@ export default function Show() {
               </div>
               {/* SESUAIKAN JADI product_name */}
               <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-[#2C1E16]">{product.product_name}</h1>
-              <div className="text-3xl font-extrabold text-[#D4813E]">{displayedPrice ? <>{!selectedVariant && product.variants?.length > 1 && 'Mulai '}Rp {Number(displayedPrice).toLocaleString('id-ID')}</> : 'Belum tersedia'}</div>
+              <div className="text-3xl font-extrabold text-[#D4813E]">{displayedPrice ? <>{!selectedVariant && product.variants?.length > 1 && 'Mulai '}{formatRupiah(displayedPrice, { spaceAfterPrefix: true })}</> : 'Belum tersedia'}</div>
             </motion.div>
 
             <motion.div variants={fadeInUp} className="mb-8">

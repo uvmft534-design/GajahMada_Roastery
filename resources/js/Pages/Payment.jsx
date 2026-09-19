@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Building2, CheckCircle2, Copy, UploadCloud } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { formatRupiah } from '../utils/currency';
 
 export default function Payment({ order }) {
   const { flash = {} } = usePage().props;
   const { data, setData, post, processing, errors } = useForm({ proof: null });
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const money = new Intl.NumberFormat('id-ID', {
-    style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
-  });
+  const money = { format: formatRupiah };
 
   const uploadProof = (event) => {
     event.preventDefault();

@@ -4,6 +4,8 @@ import { Package, Users, Plus, Edit, Trash2, TrendingUp, X, Image as ImageIcon, 
 import { orderStatusLabel } from '../utils/orderStatus';
 import AdminBackButton from '@/Components/AdminBackButton';
 import AdminPanelNav from '@/Components/AdminPanelNav';
+import { formatRupiah } from '@/utils/currency';
+import { formatWeightGrams } from '@/utils/productFormat';
 
 const standardVariants = () => [
   { weight_grams: 200, enabled: false, price: '', stock: '' },
@@ -13,7 +15,7 @@ const variantsForProduct = (variants = []) => {
   const existing = variants.map((variant) => ({ ...variant, enabled: true }));
   return [...existing, ...standardVariants().filter((variant) => !existing.some((current) => Number(current.weight_grams) === variant.weight_grams))];
 };
-const weightLabel = (weight) => Number(weight) === 1000 ? '1 kg' : `${weight} gram`;
+const weightLabel = (weight) => formatWeightGrams(weight, { style: 'words' });
 
 export default function DashboardAdmin({ section = 'overview', products = [], orders = [], analytics = {}, revenueAnalytics = {}, attention = {}, filters = {}, couriers = [], categories = [] }) {
   const { adminNotifications = {} } = usePage().props;
@@ -125,7 +127,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
           <div className="border-b border-[#2C1E16]/10 p-4 transition-colors hover:bg-[#FFF9F3] sm:border-r sm:p-6 lg:border-b-0">
             <div className="mb-4 flex items-center justify-between sm:mb-7"><span className="text-[9px] font-bold uppercase tracking-[.1em] text-[#2C1E16]/55 sm:text-[11px] sm:tracking-[.16em]">Pendapatan valid</span><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFE5CE] text-[#B86632] sm:h-9 sm:w-9"><TrendingUp size={15} className="sm:hidden" /><TrendingUp size={18} className="hidden sm:block" /></span></div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight sm:text-2xl">Rp {Number(analytics.monthlyRevenue || 0).toLocaleString('id-ID')}</h3><p className="mt-1 text-[10px] text-[#2C1E16]/50 sm:text-xs">Bulan berjalan</p>
+              <h3 className="text-lg font-bold tracking-tight sm:text-2xl">{formatRupiah(analytics.monthlyRevenue, { spaceAfterPrefix: true })}</h3><p className="mt-1 text-[10px] text-[#2C1E16]/50 sm:text-xs">Bulan berjalan</p>
             </div>
           </div>
 
@@ -143,7 +145,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
 
           <div className="bg-[#2C1E16] p-4 text-[#FDFBF7] sm:p-6"><div className="mb-4 flex items-center justify-between sm:mb-7"><span className="text-[9px] font-bold uppercase tracking-[.1em] text-[#FDFBF7]/55 sm:text-[11px] sm:tracking-[.16em]">Nilai rata-rata</span><span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[#F4C7A3] sm:h-9 sm:w-9"><TrendingUp size={15} className="sm:hidden" /><TrendingUp size={18} className="hidden sm:block" /></span></div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight sm:text-2xl">Rp {Number(analytics.avgTransaction || 0).toLocaleString('id-ID')}</h3><p className="mt-1 text-[10px] text-[#FDFBF7]/50 sm:text-xs">Per pesanan valid</p>
+              <h3 className="text-lg font-bold tracking-tight sm:text-2xl">{formatRupiah(analytics.avgTransaction, { spaceAfterPrefix: true })}</h3><p className="mt-1 text-[10px] text-[#FDFBF7]/50 sm:text-xs">Per pesanan valid</p>
             </div>
           </div>
         </div>
@@ -205,7 +207,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                       </td>
                       <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{order.customer_name || order.user?.name || '-'}</td>
                       <td className="p-4 text-sm font-medium text-[#2C1E16]/80">{order.items?.[0]?.product_name || 'Produk'}</td>
-                      <td className="p-4 font-bold">Rp {Number(order.total_amount || 0).toLocaleString('id-ID')}</td>
+                      <td className="p-4 font-bold">{formatRupiah(order.total_amount, { spaceAfterPrefix: true })}</td>
                       <td className="p-4">
                         <span className="rounded-full bg-[#D4813E]/10 px-3 py-1 text-[11px] font-bold text-[#D4813E] uppercase">{orderStatusLabel(order.status)}</span>
                         <div className="mt-1 text-[10px] font-bold uppercase text-[#2C1E16]/50">Payment: {order.payment_status}</div>
@@ -287,7 +289,7 @@ export default function DashboardAdmin({ section = 'overview', products = [], or
                       <td className="p-4 max-w-xs truncate text-xs text-[#2C1E16]/70">
                         {item.description || '-'}
                       </td>
-                      <td className="p-4 font-bold">{(item.variant_price_from ?? (item.variants?.length === 1 ? item.variants[0]?.price : null)) ? `${item.variants?.length > 1 ? 'Mulai ' : ''}Rp ${Number(item.variant_price_from ?? item.variants[0]?.price).toLocaleString('id-ID')}` : '—'}</td>
+                      <td className="p-4 font-bold">{(item.variant_price_from ?? (item.variants?.length === 1 ? item.variants[0]?.price : null)) ? `${item.variants?.length > 1 ? 'Mulai ' : ''}${formatRupiah(item.variant_price_from ?? item.variants[0]?.price, { spaceAfterPrefix: true })}` : '—'}</td>
                       <td className="p-4 font-medium text-[#2C1E16]/80"><p>Stok Total: {item.variant_stock_total || 0}</p><p className="mt-1 text-[11px] text-[#2C1E16]/50">{item.variants?.map((variant) => `${weightLabel(variant.weight_grams)}: ${variant.stock}`).join(' · ') || 'Belum dikonfigurasi'}</p></td>
                       <td className="p-4 pr-6 sm:pr-8 text-right flex items-center justify-end gap-2">
                         <button 
@@ -432,7 +434,7 @@ function RevenueLineChart({ trend, summary }) {
   if (!trend.some(point => Number(point.revenue) > 0)) return <div className="p-8 text-sm text-[#2C1E16]/60">Belum ada revenue valid dalam 7 hari terakhir.</div>;
   const points = trend.map((point, index) => `${30 + index * 90},${180 - (Number(point.revenue) / max) * 140}`).join(' ');
   const point = active === null ? null : trend[active];
-  const format = amount => `Rp${Number(amount || 0).toLocaleString('id-ID')}`;
+  const format = formatRupiah;
   const change = summary.change_percentage;
   return <div className="p-4 sm:p-8"><div className="mb-3 grid grid-cols-3 gap-2 text-[10px] sm:mb-4 sm:text-sm"><p><b className="text-xs sm:text-base">{format(summary.current_revenue)}</b><br/><span className="text-[#2C1E16]/60">revenue 7 hari</span></p><p><b className="text-xs sm:text-base">{summary.valid_order_count || 0}</b><br/><span className="text-[#2C1E16]/60">pesanan valid</span></p><p><b className="text-xs sm:text-base">{change === null ? 'Aktivitas baru' : `${change >= 0 ? '+' : ''}${change || 0}%`}</b><br/><span className="text-[#2C1E16]/60">vs 7 hari</span></p></div><div className="relative"><svg viewBox="0 0 600 220" className="h-44 w-full overflow-visible sm:h-56"><line x1="30" y1="180" x2="580" y2="180" stroke="#2C1E16" strokeOpacity=".15" /><line x1="30" y1="40" x2="30" y2="180" stroke="#2C1E16" strokeOpacity=".15" /><polyline points={points} fill="none" stroke="#D4813E" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />{trend.map((item, index) => { const x = 30 + index * 90; const y = 180 - (Number(item.revenue) / max) * 140; return <g key={item.date}><circle cx={x} cy={y} r="10" fill="transparent" onMouseEnter={() => setActive(index)} onMouseLeave={() => setActive(null)} onClick={() => setActive(active === index ? null : index)} /><circle cx={x} cy={y} r="4" fill="#D4813E" /><text x={x} y="205" textAnchor="middle" className="fill-[#2C1E16]/60 text-[11px]">{item.label}</text></g>; })}</svg>{point && <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-xl bg-[#2C1E16] px-3 py-2 text-[10px] text-white shadow-xl sm:px-4 sm:py-3 sm:text-xs"><b>{point.label}</b><br/>Revenue valid: {format(point.revenue)}<br/>Pesanan valid: {point.valid_order_count}<br/>AOV harian: {format(point.daily_aov)}</div>}</div></div>;
 }

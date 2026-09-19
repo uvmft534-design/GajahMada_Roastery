@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { BarChart3, CreditCard, ShieldCheck, Users } from 'lucide-react';
 import SuperAdminNav from '@/Components/SuperAdminNav';
+import { formatRupiah } from '@/utils/currency';
 
 const roleLabels = { customer: 'Customer', admin: 'Admin', courier: 'Courier', super_admin: 'Super Admin' };
 const statusLabels = { awaiting_payment: 'Menunggu bayar', processing: 'Diproses', packed: 'Dikemas', pickup_requested: 'Menunggu pickup', picked_up: 'Diambil courier', shipped: 'Dikirim', delivered: 'Sampai', completed: 'Selesai', cancelled: 'Dibatalkan' };
@@ -26,7 +27,7 @@ function RevenueTrend({ trend, summary }) {
   const [active, setActive] = useState(null);
   const max = Math.max(...trend.map((point) => Number(point.revenue)), 1);
   const point = active === null ? null : trend[active];
-  const format = (amount) => `Rp${Number(amount || 0).toLocaleString('id-ID')}`;
+  const format = formatRupiah;
   const change = summary.change_percentage;
   if (!trend.some((point) => Number(point.revenue) > 0)) return <div className="p-8 text-sm text-[#2C1E16]/60">Belum ada revenue valid dalam 7 hari terakhir.</div>;
   const points = trend.map((point, index) => `${30 + index * 90},${180 - (Number(point.revenue) / max) * 140}`).join(' ');

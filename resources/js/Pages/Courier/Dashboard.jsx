@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LogOut, MapPin, Phone, Settings, UserRoundCheck } from 'lucide-react';
 import { orderStatusLabel } from '../../utils/orderStatus';
+import { formatWeightGrams } from '../../utils/productFormat';
 
 export default function CourierDashboard({ orders = [], overview = {} }) {
     const { auth } = usePage().props;
@@ -37,7 +38,7 @@ export default function CourierDashboard({ orders = [], overview = {} }) {
         return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - offset}%2C${latitude - offset}%2C${longitude + offset}%2C${latitude + offset}&layer=mapnik&marker=${latitude}%2C${longitude}`;
     };
     const itemConfiguration = (item) => [
-        item.weight_grams ? `Berat: ${Number(item.weight_grams) === 1000 ? '1kg' : `${item.weight_grams}g`}` : null,
+        item.weight_grams ? `Berat: ${formatWeightGrams(item.weight_grams)}` : null,
         `Metode seduh: ${item.brew_method === 'espresso' ? 'Espresso' : 'Filter'}`,
         item.item_note ? `Catatan produk: ${item.item_note}` : null,
     ].filter(Boolean);
