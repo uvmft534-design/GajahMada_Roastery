@@ -243,15 +243,15 @@ export default function Show() {
 
             <motion.div variants={fadeInUp} className="mb-6 flex flex-col gap-3"><div className="rounded-2xl border border-[#2C1E16]/10 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wider text-[#2C1E16]/50">Pilih berat</p><div className="mt-3 flex flex-col items-start gap-2">{product.variants?.map((variant) => { const available = Number(variant.stock) > 0; const selected = Number(selectedVariantId) === Number(variant.id); return <label key={variant.id} className={`inline-flex items-center gap-2 text-sm transition ${selected ? 'text-[#D4813E]' : 'text-[#2C1E16]'} ${available ? 'cursor-pointer hover:text-[#D4813E]' : 'cursor-not-allowed opacity-50'}`}><input type="radio" name="product-variant" value={variant.id} checked={selected} disabled={!available} onChange={() => { setSelectedVariantId(variant.id); setQty((current) => Math.min(current, variant.stock)); }} className="h-4 w-4 accent-[#D4813E]" /><span className="font-bold">{weightLabel(variant.weight_grams)}</span></label>; })}</div>{sellableVariants.length > 1 && !selectedVariantId && <p className="mt-3 text-xs font-medium text-[#D4813E]">Pilih berat kopi sebelum memasukkan produk ke keranjang.</p>}</div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex h-14 w-full items-center justify-between rounded-2xl border border-[#2C1E16]/15 bg-white px-3 sm:w-auto sm:min-w-[190px]">
+                <div className="flex h-12 w-full items-center justify-between rounded-2xl border border-[#2C1E16]/15 bg-white px-4 sm:w-auto sm:min-w-[180px]">
                   <span className="text-sm font-medium text-[#2C1E16]/55">Jumlah</span>
-                  <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => handleQtyChange('min')} aria-label="Kurangi jumlah" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
-                    <Minus size={18} />
+                  <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => handleQtyChange('min')} aria-label="Kurangi jumlah" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
+                    <Minus size={16} />
                   </button>
-                  <AnimatePresence mode="popLayout"><motion.span key={qty} initial={{ opacity: 0, scale: 0.65, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.65 }} transition={{ type: 'spring', stiffness: 420, damping: 22 }} className="w-8 text-center text-lg font-bold">{qty}</motion.span></AnimatePresence>
-                  <button type="button" onClick={() => handleQtyChange('plus')} aria-label="Tambah jumlah" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
-                    <Plus size={18} />
+                  <AnimatePresence mode="popLayout"><motion.span key={qty} initial={{ opacity: 0, scale: 0.65, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.65 }} transition={{ type: 'spring', stiffness: 420, damping: 22 }} className="w-7 text-center text-base font-bold">{qty}</motion.span></AnimatePresence>
+                  <button type="button" onClick={() => handleQtyChange('plus')} aria-label="Tambah jumlah" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#2C1E16] transition-colors hover:bg-[#FFF5EA] hover:text-[#D4813E]">
+                    <Plus size={16} />
                   </button>
                   </div>
                 </div>
