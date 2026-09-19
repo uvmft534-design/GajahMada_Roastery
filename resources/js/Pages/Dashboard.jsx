@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Search, ShoppingBag, User, ArrowRight, Star, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
+import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { getWishlist, toggleWishlist } from '../utils/wishlist';
 import { formatRupiah } from '../utils/currency';
+import ProductCard from '@/Components/Marketplace/ProductCard';
 
 const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
 
@@ -377,53 +378,7 @@ export default function Dashboard() {
               viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
             >
-              {filteredProducts.map((product) => (
-                <Link
-                  key={product.product_id}
-                  href={route('products.show', product.product_id)}
-                  className="group flex transform-gpu flex-col justify-between rounded-3xl border border-[#2C1E16]/5 bg-white p-4 shadow-sm transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-1 hover:border-[#D4813E] hover:shadow-xl cursor-pointer"
-                >
-                  <div>
-                    <div className="relative w-full aspect-square bg-orange-50/50 rounded-2xl p-6 mb-4 flex items-center justify-center overflow-hidden">
-                      <button onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleWishlist(product); setWishlist(getWishlist()); }} aria-label={`Sukai ${product.product_name}`} className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-[#2C1E16]/45 shadow-sm transition-colors hover:text-red-500"><Heart size={16} className={wishlist.some((item) => item.product_id === product.product_id) ? 'fill-red-500 text-red-500' : ''} /></button>
-                      <div className="w-3/4 h-3/4 bg-transparent flex items-center justify-center overflow-visible rotate-[-5deg] group-hover:rotate-0 transition-all duration-300">
-                         <img 
-                            src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} 
-                            alt={product.product_name} 
-                            className="w-full h-full object-contain filter drop-shadow-xl" 
-                         />
-                      </div>
-                    </div>
-
-                    <div className="px-1">
-                      <div className="flex items-center gap-1 mb-2">
-                        <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
-                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(product.reviews_avg_rating || 0).toFixed(1)} / 5 ({product.reviews_count ?? 0})</span>
-                      </div>
-                      
-                      <h3 className="font-bold text-lg mb-1 truncate group-hover:text-[#D4813E] transition-colors">{product.product_name}</h3>
-                      <p className="text-xs text-[#2C1E16]/60 mb-2 line-clamp-2 min-h-[2rem]">{product.description}</p>
-                      {product.category && <div className="mb-2 inline-flex rounded-full bg-[#FFE9D2] px-2 py-0.5 text-[10px] font-bold text-[#D4813E]">{product.category}</div>}
-                    </div>
-                  </div>
-
-                    <div className="px-1 flex items-center justify-between mt-2 pt-3 border-t border-[#2C1E16]/5">
-                    <div>
-                      <span className="font-bold text-xl">
-                        {(product.variant_price_from ?? (product.variants?.length === 1 ? product.variants[0]?.price : null)) ? `${product.variants?.length > 1 ? 'Mulai ' : ''}${formatRupiah(product.variant_price_from ?? product.variants[0]?.price, { spaceAfterPrefix: true })}` : 'Belum tersedia'}
-                      </span>
-                      <div className="text-xs text-[#2C1E16]/50 mt-0.5">Stok: {product.variant_stock_total || 0}</div>
-                    </div>
-                    
-                    <span
-                      aria-label={`Lihat detail ${product.product_name}`}
-                      className="w-10 h-10 bg-[#D4813E] rounded-full flex items-center justify-center text-white group-hover:bg-[#2C1E16] transition-colors shadow-md shadow-[#D4813E]/25"
-                    >
-                      <ShoppingBag size={16} />
-                    </span>
-                  </div>
-                </Link>
-              ))}
+              {filteredProducts.map((product) => <ProductCard key={product.product_id} product={product} profile="customer" href={route('products.show', product.product_id)} isWishlisted={wishlist.some((item) => item.product_id === product.product_id)} onWishlist={(selectedProduct) => { toggleWishlist(selectedProduct); setWishlist(getWishlist()); }} />)}
             </motion.div>
           )}
         </section>

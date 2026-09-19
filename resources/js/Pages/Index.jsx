@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingBag, User, ArrowRight, Star, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Image as ImageIcon, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
+import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Image as ImageIcon, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { getWishlist, toggleWishlist } from '../utils/wishlist';
 import { formatRupiah } from '../utils/currency';
+import ProductCard from '@/Components/Marketplace/ProductCard';
 
 const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
 
@@ -400,65 +401,7 @@ export default function App({ products = [], categories = [], selectedCategory =
               viewport={{ once: true, amount: 0.1 }}
               variants={staggerContainer}
             >
-              {filteredProducts.map((product) => (
-                <motion.article
-                  key={product.product_id}
-                  variants={productCardVariants}
-                  whileHover={{ y: -4 }}
-                  transition={{ type: 'tween', duration: 0.18, ease: 'easeOut' }}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={`Lihat detail ${product.product_name}`}
-                  onClick={() => router.visit(route('products.show', product.product_id))}
-                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); router.visit(route('products.show', product.product_id)); } }}
-                  className="group flex transform-gpu cursor-pointer flex-col justify-between rounded-3xl border border-[#2C1E16]/5 bg-white p-4 shadow-sm transition-[transform,border-color] duration-200 ease-out hover:-translate-y-1 hover:border-[#D4813E] hover:shadow-xl"
-                >
-                  <div>
-                    <div className="relative mb-4 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl bg-orange-50/50 p-6">
-                      <button
-                        type="button"
-                        onClick={(event) => { event.stopPropagation(); window.location.href = route('login'); }}
-                        aria-label={`Masuk untuk menyukai ${product.product_name}`}
-                        className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-[#2C1E16]/45 shadow-sm transition-colors hover:text-red-500"
-                      >
-                        <Heart size={16} />
-                      </button>
-                      <div className="flex h-3/4 w-3/4 rotate-[-5deg] items-center justify-center overflow-visible bg-transparent transition-transform duration-300 ease-out group-hover:rotate-0">
-                        {product.image ? (
-                          <img src={`/storage/${product.image}`} alt={product.product_name} className="h-full w-full object-contain drop-shadow-xl" />
-                        ) : (
-                          <ImageIcon size={48} className="text-[#D4813E]/40" />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-1">
-                      <div className="mb-2 flex items-center gap-1">
-                        <Star size={14} className="fill-[#D4813E] text-[#D4813E]" />
-                        <span className="text-xs font-bold text-[#2C1E16]/60">{Number(product.reviews_avg_rating || 0).toFixed(1)} / 5 ({product.reviews_count ?? 0})</span>
-                      </div>
-                      <h3 className="mb-1 truncate text-lg font-bold transition-colors group-hover:text-[#D4813E]">{product.product_name}</h3>
-                      <p className="mb-2 min-h-[2rem] line-clamp-2 text-xs text-[#2C1E16]/60">{product.description || '-'}</p>
-                      {product.category && <div className="mb-2 inline-flex rounded-full bg-[#FFE9D2] px-2 py-0.5 text-[10px] font-bold text-[#D4813E]">{product.category}</div>}
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex items-center justify-between border-t border-[#2C1E16]/5 px-1 pt-3">
-                    <div>
-                      <span className="text-xl font-bold">{(product.variant_price_from ?? (product.variants?.length === 1 ? product.variants[0]?.price : null)) ? `${product.variants?.length > 1 ? 'Mulai ' : ''}${formatRupiah(product.variant_price_from ?? product.variants[0]?.price, { spaceAfterPrefix: true })}` : 'Belum tersedia'}</span>
-                      <div className="mt-0.5 text-xs text-[#2C1E16]/50">Stok: {product.variant_stock_total || 0}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(event) => { event.stopPropagation(); router.visit(route('products.show', product.product_id)); }}
-                      aria-label={`Lihat detail ${product.product_name}`}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/25 transition-colors group-hover:bg-[#2C1E16]"
-                    >
-                      <ShoppingBag size={16} />
-                    </button>
-                  </div>
-                </motion.article>
-              ))}
+              {filteredProducts.map((product) => <ProductCard key={product.product_id} product={product} profile="public" onNavigate={() => router.visit(route('products.show', product.product_id))} onRequireWishlistLogin={() => { window.location.href = route('login'); }} motionProps={{ variants: productCardVariants, whileHover: { y: -4 }, transition: { type: 'tween', duration: 0.18, ease: 'easeOut' } }} />)}
             </motion.div>
           )}
         </section>
