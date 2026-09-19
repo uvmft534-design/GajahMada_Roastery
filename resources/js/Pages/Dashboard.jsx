@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X } from 'lucide-react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { toggleWishlist } from '../utils/wishlist';
 import { formatRupiah } from '../utils/currency';
 import ProductCard from '@/Components/Marketplace/ProductCard';
+import MarketplaceAccountMenu from '@/Components/Marketplace/MarketplaceAccountMenu';
 import MarketplaceFooter from '@/Components/Marketplace/MarketplaceFooter';
 import StoreBenefits from '@/Components/Marketplace/StoreBenefits';
 
@@ -127,64 +128,15 @@ export default function Dashboard() {
             </Link>
 
             {auth && auth.user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 bg-white border border-[#2C1E16]/15 hover:border-[#D4813E] py-1.5 px-3 rounded-full transition-all shadow-sm group"
-                >
-                  <div className="w-7 h-7 rounded-full bg-[#D4813E] text-white flex items-center justify-center font-bold text-xs overflow-hidden">
-                    {auth.user.avatar ? (
-                      <img src={auth.user.avatar} alt={auth.user.name} className="w-full h-full object-cover" />
-                    ) : (
-                      auth.user.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <span className="text-xs font-semibold text-[#2C1E16] max-w-[90px] truncate hidden sm:inline">
-                    {auth.user.name}
-                  </span>
-                  <ChevronDown size={14} className={`text-[#2C1E16]/60 group-hover:text-[#D4813E] transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                <AnimatePresence>
-                  {isDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-[#2C1E16]/10 py-2 z-50 overflow-hidden"
-                    >
-                      <div className="px-4 py-3 border-b border-[#2C1E16]/10 bg-[#FDFBF7]">
-                        <p className="text-[10px] text-[#2C1E16]/50 uppercase tracking-wider font-bold">Masuk sebagai</p>
-                        <p className="text-xs font-bold text-[#2C1E16] truncate">{auth.user.name}</p>
-                        <p className="text-[11px] text-[#2C1E16]/60 truncate">{auth.user.email}</p>
-                      </div>
-
-                      <div className="py-1">
-                        {auth.user.role === 'customer' && <Link href={route('orders.history')} className="flex items-center gap-3 px-4 py-2 text-xs font-medium text-[#2C1E16]/80 hover:bg-[#D4813E]/10 hover:text-[#D4813E] transition-colors" onClick={() => setIsDropdownOpen(false)}><ShoppingBag size={15} /> Pesanan Saya</Link>}
-                        <Link
-                          href="/profile"
-                          className="flex items-center gap-3 px-4 py-2 text-xs font-medium text-[#2C1E16]/80 hover:bg-[#D4813E]/10 hover:text-[#D4813E] transition-colors"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          <Settings size={15} /> Pengaturan Profil
-                        </Link>
-                      </div>
-
-                      <div className="border-t border-[#2C1E16]/10 pt-1">
-                        <Link
-                          href="/logout"
-                          method="post"
-                          as="button"
-                          className="w-full flex items-center gap-3 px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
-                        >
-                          <LogOut size={15} /> Keluar Akun
-                        </Link>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <MarketplaceAccountMenu
+                user={auth.user}
+                isOpen={isDropdownOpen}
+                onToggle={() => setIsDropdownOpen(!isDropdownOpen)}
+                onClose={() => setIsDropdownOpen(false)}
+                dropdownRef={dropdownRef}
+                profileHref="/profile"
+                logoutHref="/logout"
+              />
             ) : (
               <Link href="/login" className="hover:text-[#D4813E] transition-transform hover:scale-110">
                 <User size={20} />
