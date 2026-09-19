@@ -45,7 +45,7 @@ class HandleInertiaRequests extends Middleware
                 : 0,
             'adminNotifications' => fn (): array => $request->user() && in_array($request->user()->role, ['admin', 'super_admin'], true)
                 ? $this->adminNotifications()
-                : ['newOrders' => 0, 'ordersNeedAttention' => 0, 'orderNotificationCount' => 0],
+                : ['newOrders' => 0, 'ordersNeedAttention' => 0, 'orderNotificationCount' => 0, 'navigationNotificationCount' => 0],
             'superAdminNotifications' => fn (): array => $request->user()?->role === 'super_admin'
                 ? [
                     'paymentRequests' => PaymentSettingChangeRequest::query()->where('status', 'pending')->count(),
@@ -74,7 +74,11 @@ class HandleInertiaRequests extends Middleware
         $orderNotificationCount = Order::query()
             ->where(fn ($query) => $query->whereNull('admin_seen_at')->orWhere($needsAction))
             ->count();
+        // This is the count displayed on the compact/mobile navigation trigger.
+        // Additional admin notification sources can be added here without changing
+        // the menu component's presentation contract.
+        $navigationNotificationCount = $orderNotificationCount;
 
-        return compact('newOrders', 'ordersNeedAttention', 'orderNotificationCount');
+        return compact('newOrders', 'ordersNeedAttention', 'orderNotificationCount', 'navigationNotificationCount');
     }
 }
