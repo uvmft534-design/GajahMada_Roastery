@@ -14,6 +14,7 @@ export default function ProductCard({
   motionProps = {},
 }) {
   const isPublic = profile === 'public';
+  const requiresLogin = isPublic && !onWishlist;
   const Root = isPublic ? motion.article : Link;
   const price = product.variant_price_from ?? (product.variants?.length === 1 ? product.variants[0]?.price : null);
   const rootProps = isPublic
@@ -40,7 +41,7 @@ export default function ProductCard({
     if (!isPublic) event.preventDefault();
     event.stopPropagation();
 
-    if (isPublic) onRequireWishlistLogin?.();
+    if (requiresLogin) onRequireWishlistLogin?.();
     else onWishlist?.(product);
   };
 
@@ -50,10 +51,10 @@ export default function ProductCard({
         <button
           type={isPublic ? 'button' : undefined}
           onClick={handleWishlist}
-          aria-label={isPublic ? `Masuk untuk menyukai ${product.product_name}` : `Sukai ${product.product_name}`}
+          aria-label={requiresLogin ? `Masuk untuk menyukai ${product.product_name}` : `Sukai ${product.product_name}`}
           className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-[#2C1E16]/45 shadow-sm transition-colors hover:text-red-500"
         >
-          <Heart size={16} className={!isPublic && isWishlisted ? 'fill-red-500 text-red-500' : undefined} />
+          <Heart size={16} className={isWishlisted ? 'fill-red-500 text-red-500' : undefined} />
         </button>
         <div className={isPublic ? 'flex h-3/4 w-3/4 rotate-[-5deg] items-center justify-center overflow-visible bg-transparent transition-transform duration-300 ease-out group-hover:rotate-0' : 'w-3/4 h-3/4 bg-transparent flex items-center justify-center overflow-visible rotate-[-5deg] group-hover:rotate-0 transition-all duration-300'}>
           {isPublic && !product.image ? <ImageIcon size={48} className="text-[#D4813E]/40" /> : <img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt={product.product_name} className={isPublic ? 'h-full w-full object-contain drop-shadow-xl' : 'w-full h-full object-contain filter drop-shadow-xl'} />}

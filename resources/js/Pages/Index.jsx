@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Image as ImageIcon, Truck, ShieldCheck, Headphones, BadgeCheck } from 'lucide-react';
+import { Search, ShoppingBag, User, ArrowRight, Heart, CheckCircle2, ChevronRight, Menu, X, LogOut, Settings, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { getWishlist, toggleWishlist } from '../utils/wishlist';
+import { toggleWishlist } from '../utils/wishlist';
 import { formatRupiah } from '../utils/currency';
 import ProductCard from '@/Components/Marketplace/ProductCard';
+import MarketplaceFooter from '@/Components/Marketplace/MarketplaceFooter';
+import StoreBenefits from '@/Components/Marketplace/StoreBenefits';
 
 const NAV_LINKS = ['Beranda', 'Shop', 'Tentang Kami', 'Blog'];
 
@@ -21,13 +23,6 @@ const REASONS = [
     title: "Selalu Segar",
     desc: "Kopi dikemas segera setelah proses resting selesai, memastikan Anda menerima kopi dalam kondisi paling optimal."
   }
-];
-
-const POLICIES = [
-  { title: "Pengiriman Cepat", desc: "Pesanan sebelum jam 15.00 dikirim di hari yang sama.", icon: Truck },
-  { title: "Garansi Kualitas", desc: "Tidak puas dengan rasa? Kami ganti 100%.", icon: BadgeCheck },
-  { title: "Dukungan 24/7", desc: "Tim CS kami siap membantu kebutuhan kopi Anda.", icon: Headphones },
-  { title: "Pembayaran Aman", desc: "Transaksi dijamin aman dengan enkripsi terkini.", icon: ShieldCheck }
 ];
 
 // Animasi dari Kiri
@@ -66,13 +61,13 @@ const productCardVariants = {
 const brewCardTransition = { duration: 0.58, ease: [0.22, 1, 0.36, 1] };
 
 export default function App({ products = [], categories = [], selectedCategory = null }) {
-  const { auth, cartItemCount = 0 } = usePage().props;
+  const { auth, cartItemCount = 0, wishlist: accountWishlist = [] } = usePage().props;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(selectedCategory);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-  const [wishlist, setWishlist] = useState([]);
+  const [wishlist, setWishlist] = useState(accountWishlist);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -89,12 +84,7 @@ export default function App({ products = [], categories = [], selectedCategory =
   }, [dropdownRef]);
 
   const scrollConfig = { once: false, amount: 0.2, margin: "0px 0px -100px 0px" };
-  useEffect(() => {
-    const refresh = () => setWishlist(getWishlist());
-    refresh();
-    window.addEventListener('wishlist:changed', refresh);
-    return () => window.removeEventListener('wishlist:changed', refresh);
-  }, []);
+  useEffect(() => setWishlist(accountWishlist), [accountWishlist]);
 
   const categoryKey = (category) => String(category || '').trim().toLocaleLowerCase('id-ID');
   const categoryFilters = ['Semua', ...categories.map((category) => String(category).trim()).filter(Boolean)];
@@ -137,7 +127,7 @@ export default function App({ products = [], categories = [], selectedCategory =
 
           <div className="flex items-center gap-5">
             <button onClick={() => setIsSearchOpen((open) => !open)} aria-label="Cari produk" aria-expanded={isSearchOpen} className="hover:text-[#D4813E] transition-transform hover:scale-110"><Search size={20} /></button>
-            <button onClick={() => { window.location.href = route('login'); }} aria-label="Masuk untuk membuka wishlist" className="relative hover:text-[#D4813E] transition-transform hover:scale-110"><Heart size={20} className={wishlist.length ? 'fill-[#D4813E]/20' : ''} />{wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{wishlist.length}</span>}</button>
+            <button onClick={() => { auth?.user ? setIsWishlistOpen((open) => !open) : window.location.href = route('login'); }} aria-label={auth?.user ? 'Wishlist' : 'Masuk untuk membuka wishlist'} aria-expanded={auth?.user ? isWishlistOpen : undefined} className="relative hover:text-[#D4813E] transition-transform hover:scale-110"><Heart size={20} className={auth?.user && wishlist.length ? 'fill-[#D4813E]/20' : ''} />{auth?.user && wishlist.length > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-[#D4813E] px-1 text-[10px] font-bold text-white">{wishlist.length}</span>}</button>
             
             <Link
               href={route('login')}
@@ -242,7 +232,7 @@ export default function App({ products = [], categories = [], selectedCategory =
         </AnimatePresence>
       </motion.nav>
 
-      <AnimatePresence>{isWishlistOpen && <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ duration: .22 }} className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-[#2C1E16]/10 bg-white p-4 shadow-2xl"><div className="flex items-center justify-between border-b border-[#2C1E16]/10 pb-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Pilihan Anda</p><h2 className="font-bold">Wishlist</h2></div><button onClick={() => setIsWishlistOpen(false)} className="rounded-full p-2 hover:bg-orange-50"><X size={17}/></button></div>{wishlist.length === 0 ? <p className="py-8 text-center text-sm text-[#2C1E16]/60">Belum ada produk yang disukai.</p> : <div className="mt-3 max-h-[60vh] space-y-2">{wishlist.map((product) => <div key={product.product_id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-[#FFE9D2]/40"><Link href={route('products.show', product.product_id)} onClick={() => setIsWishlistOpen(false)} className="flex min-w-0 flex-1 items-center gap-3"><img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt="" className="h-12 w-12 rounded-xl object-cover"/><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{product.product_name}</strong><small className="text-[#D4813E]">{product.variant_price_from ? formatRupiah(product.variant_price_from, { spaceAfterPrefix: true }) : 'Lihat detail'}</small></span></Link><button onClick={() => { toggleWishlist(product); setWishlist(getWishlist()); }} aria-label={`Hapus ${product.product_name} dari wishlist`} className="rounded-full p-2 text-red-500 hover:bg-white"><Heart size={16} className="fill-red-500"/></button></div>)}</div>}</motion.aside>}</AnimatePresence>
+      <AnimatePresence>{isWishlistOpen && <motion.aside initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 24 }} transition={{ duration: .22 }} className="fixed right-4 top-24 z-50 w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-[#2C1E16]/10 bg-white p-4 shadow-2xl"><div className="flex items-center justify-between border-b border-[#2C1E16]/10 pb-3"><div><p className="text-xs font-bold uppercase tracking-wider text-[#D4813E]">Pilihan Anda</p><h2 className="font-bold">Wishlist</h2></div><button onClick={() => setIsWishlistOpen(false)} className="rounded-full p-2 hover:bg-orange-50"><X size={17}/></button></div>{wishlist.length === 0 ? <p className="py-8 text-center text-sm text-[#2C1E16]/60">Belum ada produk yang disukai.</p> : <div className="mt-3 max-h-[60vh] space-y-2">{wishlist.map((product) => <div key={product.product_id} className="flex items-center gap-3 rounded-2xl p-2 hover:bg-[#FFE9D2]/40"><Link href={route('products.show', product.product_id)} onClick={() => setIsWishlistOpen(false)} className="flex min-w-0 flex-1 items-center gap-3"><img src={product.image ? `/storage/${product.image}` : '/images/placeholder-coffee.png'} alt="" className="h-12 w-12 rounded-xl object-cover"/><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{product.product_name}</strong><small className="text-[#D4813E]">{product.variant_price_from ? formatRupiah(product.variant_price_from, { spaceAfterPrefix: true }) : 'Lihat detail'}</small></span></Link><button onClick={() => toggleWishlist(product, true, { onSuccess: () => setWishlist((current) => current.filter((item) => item.product_id !== product.product_id)) })} aria-label={`Hapus ${product.product_name} dari wishlist`} className="rounded-full p-2 text-red-500 hover:bg-white"><Heart size={16} className="fill-red-500"/></button></div>)}</div>}</motion.aside>}</AnimatePresence>
 
       <AnimatePresence>
         {isSearchOpen && (
@@ -401,7 +391,7 @@ export default function App({ products = [], categories = [], selectedCategory =
               viewport={{ once: true, amount: 0.1 }}
               variants={staggerContainer}
             >
-              {filteredProducts.map((product) => <ProductCard key={product.product_id} product={product} profile="public" onNavigate={() => router.visit(route('products.show', product.product_id))} onRequireWishlistLogin={() => { window.location.href = route('login'); }} motionProps={{ variants: productCardVariants, whileHover: { y: -4 }, transition: { type: 'tween', duration: 0.18, ease: 'easeOut' } }} />)}
+              {filteredProducts.map((product) => <ProductCard key={product.product_id} product={product} profile="public" isWishlisted={wishlist.some((item) => item.product_id === product.product_id)} onNavigate={() => router.visit(route('products.show', product.product_id))} onWishlist={auth?.user ? (selectedProduct) => { const selected = wishlist.some((item) => item.product_id === selectedProduct.product_id); toggleWishlist(selectedProduct, selected, { onSuccess: () => setWishlist((current) => selected ? current.filter((item) => item.product_id !== selectedProduct.product_id) : [selectedProduct, ...current]) }); } : undefined} onRequireWishlistLogin={() => { window.location.href = route('login'); }} motionProps={{ variants: productCardVariants, whileHover: { y: -4 }, transition: { type: 'tween', duration: 0.18, ease: 'easeOut' } }} />)}
             </motion.div>
           )}
         </section>
@@ -485,84 +475,12 @@ export default function App({ products = [], categories = [], selectedCategory =
         </section>
 
         {/* SECTION 5: KEBIJAKAN & CATATAN TOKO */}
-        <section className="border-y border-[#2C1E16]/10 py-16 bg-white overflow-hidden">
-          <div className="max-w-7xl mx-auto px-6">
-            <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
-              initial="hidden"
-              whileInView="visible"
-              viewport={scrollConfig}
-              variants={staggerContainer}
-            >
-              {POLICIES.map((policy, idx) => {
-                const Icon = policy.icon;
-                return <motion.div key={idx} variants={slideInLeft} whileHover={{ y: -5 }} className="group rounded-3xl border border-[#2C1E16]/10 bg-[#FDFBF7] p-6 shadow-sm transition-shadow hover:shadow-lg">
-                  <div className="mb-4 grid h-11 w-11 place-items-center rounded-2xl bg-[#D4813E] text-white shadow-md shadow-[#D4813E]/25 transition-transform group-hover:scale-110"><Icon size={21} /></div>
-                  <h4 className="font-bold text-base">{policy.title}</h4>
-                  <p className="mt-2 text-sm text-[#2C1E16]/60 leading-relaxed">{policy.desc}</p>
-                </motion.div>;
-              })}
-            </motion.div>
-          </div>
-        </section>
+        <StoreBenefits scrollConfig={scrollConfig} staggerContainer={staggerContainer} slideInLeft={slideInLeft} />
 
       </main>
 
       {/* FOOTER */}
-      <footer id="blog" className="bg-[#2C1E16] text-[#FDFBF7] py-16 overflow-hidden">
-        <motion.div 
-          initial="hidden"
-          whileInView="visible"
-          viewport={scrollConfig}
-          variants={slideInRight}
-          className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12"
-        >
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center overflow-hidden">
-                 <img src="/images/logo.png" alt="Logo Kopi Gajahmada" className="w-full h-full object-cover" />
-              </div>
-              <span className="font-bold text-2xl tracking-tight text-[#D4813E]">Kopi Gajahmada</span>
-            </div>
-            <p className="text-[#FDFBF7]/60 max-w-sm mb-6 text-sm leading-relaxed">
-              Menyajikan biji kopi nusantara kualitas terbaik. Di-roast dengan presisi untuk memenuhi standar tertinggi kedai kopi dan penyeduh rumahan.
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="font-bold mb-4 text-[#D4813E] uppercase tracking-wider text-sm">Tautan Cepat</h4>
-            <ul className="flex flex-col gap-3 text-[#FDFBF7]/60 text-sm">
-              <li><a href="#" className="hover:text-white hover:translate-x-2 transition-transform inline-block">Semua Produk</a></li>
-              <li><a href="#" className="hover:text-white hover:translate-x-2 transition-transform inline-block">Tentang Roastery</a></li>
-              <li><a href="#" className="hover:text-white hover:translate-x-2 transition-transform inline-block">Artikel Kopi</a></li>
-              <li><a href="#" className="hover:text-white hover:translate-x-2 transition-transform inline-block">Kontak Kami</a></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="font-bold mb-4 text-[#D4813E] uppercase tracking-wider text-sm">Kontak</h4>
-            <ul className="flex flex-col gap-3 text-[#FDFBF7]/60 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="mt-1">📍</span> Jl. Kopi Nusantara No. 88, Jakarta
-              </li>
-              <li className="flex items-center gap-2">
-                <span>✉️</span> hello@kopigajahmada.com
-              </li>
-              <li className="flex items-center gap-2">
-                <span>📞</span> +62 812 3456 7890
-              </li>
-            </ul>
-          </div>
-        </motion.div>
-        
-        <div className="max-w-7xl mx-auto px-6 mt-16 pt-8 border-t border-white/10 text-center text-sm text-[#FDFBF7]/40 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>&copy; {new Date().getFullYear()} Kopi Gajahmada Roastery. All rights reserved.</p>
-          <div className="flex gap-4">
-             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-             <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
+      <MarketplaceFooter scrollConfig={scrollConfig} slideInRight={slideInRight} />
     </div>
   );
 }

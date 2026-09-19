@@ -6,6 +6,7 @@ use Database\Factories\UserFactory; // 1. Import kontrak ini
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -69,6 +70,11 @@ class User extends Authenticatable implements MustVerifyEmail // 2. Tambahkan 'i
     public function productReviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    public function wishlistProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'wishlists', 'user_id', 'product_id', 'id', 'product_id')->withTimestamps();
     }
 
     public function complaints(): HasMany

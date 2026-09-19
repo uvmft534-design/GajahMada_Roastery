@@ -5,7 +5,7 @@ import {
   Minus, Plus, Store, CheckCircle2, ChevronLeft, ExternalLink 
 } from 'lucide-react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { hasWishlisted, toggleWishlist } from '../utils/wishlist';
+import { toggleWishlist } from '../utils/wishlist';
 import { formatRupiah } from '../utils/currency';
 import { formatWeightGrams } from '../utils/productFormat';
 
@@ -24,7 +24,7 @@ const staggerContainer = {
 const weightLabel = formatWeightGrams;
 
 export default function Show() {
-  const { product, auth, cartItemCount = 0 } = usePage().props;
+  const { product, auth, cartItemCount = 0, wishlist = [] } = usePage().props;
 
   if (!product) {
     return (
@@ -45,7 +45,7 @@ export default function Show() {
   const selectedVariant = product.variants?.find((variant) => Number(variant.id) === Number(selectedVariantId));
   const displayedPrice = selectedVariant?.price ?? summaryPrice;
   const displayedStock = selectedVariant?.stock ?? product.variant_stock_total ?? 0;
-  const [isWishlisted, setIsWishlisted] = useState(() => hasWishlisted(product.product_id));
+  const [isWishlisted, setIsWishlisted] = useState(() => wishlist.some((item) => item.product_id === product.product_id));
   const [isAdding, setIsAdding] = useState(false);
   const [cartFeedback, setCartFeedback] = useState('');
   const [isWishlisting, setIsWishlisting] = useState(false);
@@ -125,11 +125,18 @@ export default function Show() {
 
     const willBeWishlisted = !isWishlisted;
     const reduceMotion = willBeWishlisted ? animateProductTo(wishlistButtonRef) : true;
-    toggleWishlist(product);
-    setIsWishlisted(willBeWishlisted);
     setIsWishlisting(true);
     setWishlistFeedback(willBeWishlisted ? `${product.product_name} ditambahkan ke wishlist.` : `${product.product_name} dihapus dari wishlist.`);
-    wishlistTimerRef.current = window.setTimeout(() => setIsWishlisting(false), reduceMotion ? 0 : 650);
+    toggleWishlist(product, isWishlisted, {
+      onSuccess: () => {
+        setIsWishlisted(willBeWishlisted);
+        wishlistTimerRef.current = window.setTimeout(() => setIsWishlisting(false), reduceMotion ? 0 : 650);
+      },
+      onError: () => {
+        setIsWishlisting(false);
+        setWishlistFeedback('Wishlist belum dapat diperbarui. Silakan coba lagi.');
+      },
+    });
   };
 
   return (

@@ -43,6 +43,9 @@ class HandleInertiaRequests extends Middleware
                     ->whereHas('cart', fn ($query) => $query->where('user_id', $request->user()->id))
                     ->count()
                 : 0,
+            'wishlist' => fn () => $request->user()?->isCustomer()
+                ? $request->user()->wishlistProducts()->withVariantSummary()->withAvg('reviews', 'rating')->withCount('reviews')->latest('wishlists.created_at')->get()
+                : [],
             'adminNotifications' => fn (): array => $request->user() && in_array($request->user()->role, ['admin', 'super_admin'], true)
                 ? $this->adminNotifications()
                 : ['newOrders' => 0, 'ordersNeedAttention' => 0, 'orderNotificationCount' => 0, 'navigationNotificationCount' => 0],

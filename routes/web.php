@@ -15,6 +15,7 @@ use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SuperAdminReportController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -30,6 +31,9 @@ require __DIR__.'/auth.php';
 
 Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/products/{product}', [WishlistController::class, 'store'])->name('wishlist.store');
+    Route::delete('/wishlist/products/{product}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/products/{product}', [CartController::class, 'store'])->name('cart.store');
