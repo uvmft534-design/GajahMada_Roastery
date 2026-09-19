@@ -4,6 +4,7 @@ import AdminPanelNav from '@/Components/AdminPanelNav';
 import { orderStatusLabel } from '../../../utils/orderStatus';
 import { formatRupiah } from '@/utils/currency';
 import { formatWeightGrams } from '@/utils/productFormat';
+import { formatOrderItemBrewMethod } from '@/utils/orderItemFormat';
 
 const rupiah = formatRupiah;
 
@@ -71,7 +72,7 @@ export default function AdminOrderShow({ order }) {
                   {item.weight_grams && <div><dt className="text-xs text-[#2C1E16]/55">Berat</dt><dd className="mt-1 font-semibold">{formatWeightGrams(item.weight_grams)}</dd></div>}
                   <div><dt className="text-xs text-[#2C1E16]/55">Harga satuan</dt><dd className="mt-1 font-semibold">{rupiah(item.unit_price)}</dd></div>
                   <div><dt className="text-xs text-[#2C1E16]/55">Subtotal</dt><dd className="mt-1 font-semibold">{rupiah(item.subtotal)}</dd></div>
-                  {item.brew_method && <div><dt className="text-xs text-[#2C1E16]/55">Metode seduh</dt><dd className="mt-1 font-semibold">{item.brew_method === 'espresso' ? 'Espresso' : item.brew_method === 'filter' ? 'Filter' : item.brew_method}</dd></div>}
+                  {item.brew_method && <div><dt className="text-xs text-[#2C1E16]/55">Metode seduh</dt><dd className="mt-1 font-semibold">{formatOrderItemBrewMethod(item.brew_method)}</dd></div>}
                 </dl>
                 {item.item_note && <div className="mt-4 rounded-xl bg-[#FFF9F3] px-4 py-3 text-sm leading-6"><p className="text-xs font-bold uppercase tracking-[.12em] text-[#9A4F1D]">Catatan produk</p><p className="mt-1 whitespace-pre-line">{item.item_note}</p></div>}
               </article>)}

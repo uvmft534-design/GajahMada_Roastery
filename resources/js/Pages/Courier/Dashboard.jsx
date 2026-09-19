@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { LogOut, MapPin, Phone, Settings, UserRoundCheck } from 'lucide-react';
 import { orderStatusLabel } from '../../utils/orderStatus';
 import { formatWeightGrams } from '../../utils/productFormat';
+import { formatOrderItemBrewMethod } from '../../utils/orderItemFormat';
 
 export default function CourierDashboard({ orders = [], overview = {} }) {
     const { auth } = usePage().props;
@@ -39,7 +40,7 @@ export default function CourierDashboard({ orders = [], overview = {} }) {
     };
     const itemConfiguration = (item) => [
         item.weight_grams ? `Berat: ${formatWeightGrams(item.weight_grams)}` : null,
-        `Metode seduh: ${item.brew_method === 'espresso' ? 'Espresso' : 'Filter'}`,
+        `Metode seduh: ${formatOrderItemBrewMethod(item.brew_method, 'Filter')}`,
         item.item_note ? `Catatan produk: ${item.item_note}` : null,
     ].filter(Boolean);
 
